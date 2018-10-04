@@ -2,7 +2,9 @@ package lexer
 
 import (
 	"os"
+	"io"
 	"fmt"
+	"bufio"
 	"strings"
 	"strconv"
 	tok "hike/token"
@@ -316,6 +318,33 @@ func (lexer *Lexer) PushRune(c rune) {
 	}
 }
 
+func (lexer *Lexer) PushString(chunk string) {
+	for _, c := range chunk {
+		if lexer.state == s_ERROR {
+			return
+		}
+		lexer.PushRune(c)
+	}
+}
+
 func (lexer *Lexer) FirstError() herr.Error {
+	return lexer.firstError
+}
+
+func (lexer *Lexer) Slurp(in io.Reader) herr.Error {
+	br := bufio.NewReader(in)
+	for lexer.state != s_ERROR {
+		c, size, err := br.ReadRune()
+		if size > 0 {
+			lexer.PushRune(c)
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			lexer.propagate(err)
+			break
+		}
+	}
 	return lexer.firstError
 }
