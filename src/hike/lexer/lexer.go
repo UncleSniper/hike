@@ -1,15 +1,14 @@
 package lexer
 
-import "os"
-import "fmt"
-import "strings"
-import "strconv"
-import tok "hike/token"
-import loc "hike/location"
-import herr "hike/error"
-
-var _ = tok.T_EOF //TODO: delete
-var _ = loc.Location{"", 0, 0} //TODO: delete
+import (
+	"os"
+	"fmt"
+	"strings"
+	"strconv"
+	tok "hike/token"
+	loc "hike/location"
+	herr "hike/error"
+)
 
 type State uint
 
@@ -17,11 +16,14 @@ const (
 	s_NONE State = iota
 	s_ERROR
 	s_NAME
+	s_MINUS
+	s_PLUS
 	s_INT
 	s_STRING
 	s_STRING_ESCAPE
 	s_STRING_HEX
-	s_STRING_UNICODE
+	s_STRING_UNICODE16
+	s_STRING_UNICODE32
 )
 
 type Lexer struct {
@@ -33,6 +35,8 @@ type Lexer struct {
 	buffer strings.Builder
 	sink chan *tok.Token
 	firstError herr.Error
+	code uint32
+	digits uint
 }
 
 func New(file string, sink chan *tok.Token) *Lexer {
@@ -96,6 +100,57 @@ func (lexer *Lexer) propagate(trueError error) {
 	lexer.state = s_ERROR
 }
 
+func (lexer *Lexer) emitWithText(ttype tok.Type, text string) {
+	lexer.sink <- &tok.Token {
+		Location: loc.Location {
+			File: lexer.file,
+			Line: lexer.line,
+			Column: lexer.start,
+		},
+		Type: ttype,
+		Text: text,
+	}
+}
+
+func (lexer *Lexer) emitFromBuffer(ttype tok.Type) {
+	text := lexer.buffer.String()
+	lexer.buffer.Reset()
+	lexer.emitWithText(ttype, text)
+}
+
+func decodeHex(c rune) int {
+	switch {
+		case c >= '0' && c <= '9':
+			return int(c - '0')
+		case c >= 'a' && c <= 'f':
+			return int(c - 'a') + 10
+		case c >= 'A' && c <= 'F':
+			return int(c - 'a') + 10
+		default:
+			return -1
+	}
+}
+
+func (lexer *Lexer) doStringHex(c rune, maxDigits uint) bool {
+	digit := decodeHex(c)
+	if digit < 0 {
+		lexer.die(c, "hexadecimal digit")
+		return true
+	}
+	lexer.code = lexer.code * 16 + uint32(digit)
+	lexer.digits++
+	if lexer.digits >= maxDigits {
+		_, err := lexer.buffer.WriteRune(rune(lexer.code))
+		if err != nil {
+			lexer.propagate(err)
+			return true
+		}
+		lexer.digits = 0
+		lexer.code = 0
+	}
+	return false
+}
+
 func (lexer *Lexer) PushRune(c rune) {
 	var err error
   again:
@@ -104,6 +159,14 @@ func (lexer *Lexer) PushRune(c rune) {
 			lexer.start = lexer.column
 			switch c {
 				case ' ', '\t', '\r', '\n':
+				case '{':
+					lexer.emitWithText(tok.T_LBRACE, "{")
+				case '}':
+					lexer.emitWithText(tok.T_RBRACE, "}")
+				case '-':
+					lexer.state = s_MINUS
+				case '+':
+					lexer.state = s_PLUS
 				case '"':
 					lexer.state = s_STRING
 				default:
@@ -138,19 +201,110 @@ func (lexer *Lexer) PushRune(c rune) {
 				}
 			} else {
 				lexer.state = s_NONE
-				//TODO: emit token
+				lexer.emitFromBuffer(tok.T_NAME)
 				goto again
 			}
+		case s_MINUS, s_PLUS:
+			if c >= '0' && c <= '9' {
+				_, err = lexer.buffer.WriteRune('-')
+				if err != nil {
+					lexer.propagate(err)
+					return
+				}
+				_, err = lexer.buffer.WriteRune(c)
+				if err != nil {
+					lexer.propagate(err)
+					return
+				}
+				lexer.state = s_INT
+			} else {
+				lexer.die(c, "decimal digit")
+				return
+			}
 		case s_INT:
-			//TODO
+			if c >= '0' && c <= '9' {
+				_, err = lexer.buffer.WriteRune(c)
+				if err != nil {
+					lexer.propagate(err)
+					return
+				}
+			} else {
+				lexer.state = s_NONE
+				lexer.emitFromBuffer(tok.T_INT)
+				goto again
+			}
 		case s_STRING:
-			//TODO
+			switch c {
+				case '"':
+					lexer.state = s_NONE
+					lexer.emitFromBuffer(tok.T_STRING)
+				case '\\':
+					lexer.state = s_STRING_ESCAPE
+				case '\r', '\n':
+					lexer.die(c, "'\"'")
+					return
+				default:
+					_, err = lexer.buffer.WriteRune(c)
+					if err != nil {
+						lexer.propagate(err)
+						return
+					}
+			}
 		case s_STRING_ESCAPE:
-			//TODO
+			switch c {
+				case 'r':
+					_, err = lexer.buffer.WriteRune('\r')
+					lexer.state = s_STRING
+				case 'n':
+					_, err = lexer.buffer.WriteRune('\n')
+					lexer.state = s_STRING
+				case 't':
+					_, err = lexer.buffer.WriteRune('\t')
+					lexer.state = s_STRING
+				case 'b':
+					_, err = lexer.buffer.WriteRune('\b')
+					lexer.state = s_STRING
+				case 'a':
+					_, err = lexer.buffer.WriteRune('\a')
+					lexer.state = s_STRING
+				case 'f':
+					_, err = lexer.buffer.WriteRune('\f')
+					lexer.state = s_STRING
+				case 'v':
+					_, err = lexer.buffer.WriteRune('\v')
+					lexer.state = s_STRING
+				case 'e':
+					_, err = lexer.buffer.WriteRune('\033')
+					lexer.state = s_STRING
+				case '\\':
+					_, err = lexer.buffer.WriteRune('\\')
+					lexer.state = s_STRING
+				case '"':
+					_, err = lexer.buffer.WriteRune('"')
+					lexer.state = s_STRING
+				case 'x':
+					lexer.state = s_STRING_HEX
+				case 'u':
+					lexer.state = s_STRING_UNICODE16
+				case 'U':
+					lexer.state = s_STRING_UNICODE32
+			}
+			if err != nil {
+				lexer.propagate(err)
+				return
+			}
 		case s_STRING_HEX:
-			//TODO
-		case s_STRING_UNICODE:
-			//TODO
+			if lexer.doStringHex(c, 2) {
+				return
+			}
+		case s_STRING_UNICODE16:
+			if lexer.doStringHex(c, 4) {
+				return
+			}
+		case s_STRING_UNICODE32:
+			if lexer.doStringHex(c, 8) {
+				return
+			}
 		default:
 			panic(fmt.Sprintf("Unrecognized lexer state: %d", lexer.state))
 	}

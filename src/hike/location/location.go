@@ -1,7 +1,9 @@
 package location
 
-import "fmt"
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type Location struct {
 	File string

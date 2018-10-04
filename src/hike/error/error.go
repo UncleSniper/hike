@@ -1,8 +1,10 @@
 package error
 
-import "os"
-import "fmt"
-import loc "hike/location"
+import (
+	"os"
+	"fmt"
+	loc "hike/location"
+)
 
 type Error interface {
 	PrintError() error
