@@ -52,6 +52,7 @@ func New(file string, sink chan *tok.Token) *Lexer {
 
 type LexicalError struct {
 	Unexpected rune
+	IsEnd bool
 	Expected string
 	Location *loc.Location
 }
@@ -61,10 +62,16 @@ func (lerr *LexicalError) PrintError() error {
 	if err != nil {
 		return err
 	}
+	var unexpected string
+	if lerr.IsEnd {
+		unexpected = "end of input"
+	} else {
+		unexpected = strconv.QuoteRune(lerr.Unexpected)
+	}
 	_, err = fmt.Fprintf(
 		os.Stderr,
 		"Lexical error near %s at %s: Expected %s\n",
-		strconv.QuoteRune(lerr.Unexpected),
+		unexpected,
 		location,
 		lerr.Expected,
 	)
@@ -88,6 +95,17 @@ func (lexer *Lexer) Location() *loc.Location {
 func (lexer *Lexer) die(unexpected rune, expected string) {
 	lexer.firstError = &LexicalError {
 		Unexpected: unexpected,
+		IsEnd: false,
+		Expected: expected,
+		Location: lexer.Location(),
+	}
+	lexer.state = s_ERROR
+}
+
+func (lexer *Lexer) noEnd(expected string) {
+	lexer.firstError = &LexicalError {
+		Unexpected: '\x00',
+		IsEnd: true,
 		Expected: expected,
 		Location: lexer.Location(),
 	}
@@ -308,7 +326,7 @@ func (lexer *Lexer) PushRune(c rune) {
 				return
 			}
 		default:
-			panic(fmt.Sprintf("Unrecognized lexer state: %d", lexer.state))
+			panic(fmt.Sprintf("Unrecognized lexer state: %d", uint(lexer.state)))
 	}
 	if c == '\n' {
 		lexer.line++
@@ -316,6 +334,32 @@ func (lexer *Lexer) PushRune(c rune) {
 	} else {
 		lexer.column++
 	}
+}
+
+func (lexer *Lexer) EndUnit() herr.Error {
+	switch lexer.state {
+		case s_NONE, s_ERROR:
+		case s_NAME:
+			lexer.emitFromBuffer(tok.T_NAME)
+		case s_MINUS, s_PLUS:
+			lexer.noEnd("decimal digit")
+		case s_INT:
+			lexer.emitFromBuffer(tok.T_INT)
+		case s_STRING:
+			lexer.noEnd("'\"'")
+		case s_STRING_ESCAPE:
+			lexer.noEnd("escape sequence")
+		case s_STRING_HEX, s_STRING_UNICODE16, s_STRING_UNICODE32:
+			lexer.noEnd("hexadecimal digit")
+		default:
+			panic(fmt.Sprintf("Unrecognized lexer state: %d", uint(lexer.state)))
+	}
+	if lexer.state != s_ERROR {
+		lexer.state = s_NONE
+	}
+	lexer.start = lexer.column
+	lexer.emitWithText(tok.T_EOF, "")
+	return lexer.firstError
 }
 
 func (lexer *Lexer) PushString(chunk string) {
@@ -346,5 +390,5 @@ func (lexer *Lexer) Slurp(in io.Reader) herr.Error {
 			break
 		}
 	}
-	return lexer.firstError
+	return lexer.EndUnit()
 }
