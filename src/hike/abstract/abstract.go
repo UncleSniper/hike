@@ -1,12 +1,59 @@
 package abstract
 
+import (
+	"os"
+	"fmt"
+	"time"
+	loc "hike/location"
+)
+
+func IndentError(level uint) (err error) {
+	for ; level > 0; level-- {
+		_, err = fmt.Fprint(os.Stderr, "    ")
+		if err != nil {
+			break
+		}
+	}
+	return
+}
+
+type AriseRef struct {
+	Text string
+	Location *loc.Location
+}
+
+func (ref *AriseRef) PrintArise(level uint) (err error) {
+	_, err = fmt.Fprintln(os.Stderr, "arising from")
+	if err != nil {
+		return
+	}
+	err = IndentError(level + 1)
+	if err != nil {
+		return
+	}
+	_, err = fmt.Fprintln(os.Stderr, ref.Text)
+	if err != nil {
+		return
+	}
+	err = IndentError(level)
+	if err != nil {
+		return
+	}
+	location, err := ref.Location.Format()
+	if err != nil {
+		return
+	}
+	_, err = fmt.Fprintf(os.Stderr, "at %s", location)
+	return
+}
+
 type BuildFrame interface {
 	PrintErrorFrame(level uint) error
 }
 
 type BuildError interface {
 	PrintBuildError(level uint) error
-	AddErrorFrame(frame *BuildFrame)
+	AddErrorFrame(frame BuildFrame)
 }
 
 type ArtifactKey struct {
@@ -19,9 +66,12 @@ func (key *ArtifactKey) Unified() string {
 }
 
 type Artifact interface {
-	ArtifactKey() ArtifactKey
+	ArtifactKey() *ArtifactKey
 	DisplayName() string
+	ArtifactArise() *AriseRef
 	PathNames(sink []string) []string
+	EarliestModTime() (time.Time, BuildError, bool)
+	LatestModTime() (time.Time, BuildError, bool)
 	Flatten() BuildError
 	Require(plan *Plan) BuildError
 }
@@ -32,11 +82,29 @@ type Step interface {
 }
 
 type Transform interface {
-	Plan(destinations []*Artifact, plan *Plan) BuildError
+	TransformDescr() string
+	TransformArise() *AriseRef
+	Plan(destination Artifact, plan *Plan) BuildError
 }
 
-type Goal interface {
-	Attain(plan *Plan) BuildError
+type Action interface {
+	SimpleDescr() string
+	Perform(plan *Plan) BuildError
+	ActionArise() *AriseRef
+}
+
+type Goal struct {
+	Name string
+	Arise *AriseRef
+	actions []Action
+}
+
+func (goal *Goal) AddAction(action Action) {
+	goal.actions = append(goal.actions, action)
+}
+
+func (goal *Goal) Actions() []Action {
+	return goal.actions
 }
 
 type Config struct {
