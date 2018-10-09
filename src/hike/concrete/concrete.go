@@ -9,30 +9,19 @@ import (
 
 // ---------------------------------------- BuildFrame ----------------------------------------
 
-func PrintArtifactErrorFrameBase(level uint, action string, artifact abs.Artifact) (err error) {
-	_, err = fmt.Fprintf(os.Stderr, "%s artifact\n", action)
-	if err != nil {
-		return
-	}
-	err = abs.IndentError(level + 1)
-	if err != nil {
-		return
-	}
-	_, err = fmt.Fprintf(
-		os.Stderr,
+func PrintArtifactErrorFrameBase(level uint, action string, artifact abs.Artifact) error {
+	prn := &abs.ErrorPrinter{}
+	prn.Level(level)
+	prn.Printf("%s artifact\n", action)
+	prn.Indent(1)
+	prn.Printf(
 		"%s [%s]\n",
 		artifact.DisplayName(),
 		artifact.ArtifactKey().Unified(),
 	)
-	if err != nil {
-		return
-	}
-	err = abs.IndentError(level)
-	if err != nil {
-		return
-	}
-	err = artifact.ArtifactArise().PrintArise(level)
-	return
+	prn.Indent(0)
+	prn.Arise(artifact.ArtifactArise(), 0)
+	return prn.Done()
 }
 
 type RequireArtifactFrame struct {
@@ -213,12 +202,17 @@ var _ abs.BuildError = &CannotStatError{}
 
 type ArtifactBase struct {
 	Key abs.ArtifactKey
+	ID abs.ArtifactID
 	Name string
 	Arise *abs.AriseRef
 }
 
 func (artifact *ArtifactBase) ArtifactKey() *abs.ArtifactKey {
 	return &artifact.Key
+}
+
+func (artifact *ArtifactBase) ArtifactID() abs.ArtifactID {
+	return artifact.ID
 }
 
 func (artifact *ArtifactBase) ArtifactArise() *abs.AriseRef {
@@ -286,6 +280,9 @@ func FileExists(path string) (exists bool, err abs.BuildError) {
 }
 
 func (artifact *FileArtifact) Require(plan *abs.Plan) (err abs.BuildError) {
+	if plan.AlreadyUpToDate(artifact) {
+		return
+	}
 	if artifact.GeneratingTransform != nil {
 		err = artifact.GeneratingTransform.Plan(artifact, plan)
 		if err != nil {
@@ -306,6 +303,9 @@ func (artifact *FileArtifact) Require(plan *abs.Plan) (err abs.BuildError) {
 				}
 		}
 	}
+	if err != nil {
+		plan.BroughtUpToDate(artifact)
+	}
 	return
 }
 
@@ -323,6 +323,7 @@ func NewFile(
 		GeneratingTransform: generatingTransform,
 	}
 	artifact.Key = key
+	artifact.ID = abs.NextArtifactID()
 	artifact.Name = name
 	artifact.Arise = arise
 	return artifact
@@ -410,6 +411,9 @@ func (artifact *GroupArtifact) Flatten() (err abs.BuildError) {
 }
 
 func (artifact *GroupArtifact) Require(plan *abs.Plan) (err abs.BuildError) {
+	if plan.AlreadyUpToDate(artifact) {
+		return
+	}
 	for _, child := range artifact.children {
 		err = child.Require(plan)
 		if err != nil {
@@ -419,6 +423,7 @@ func (artifact *GroupArtifact) Require(plan *abs.Plan) (err abs.BuildError) {
 			return
 		}
 	}
+	plan.BroughtUpToDate(artifact)
 	return
 }
 
@@ -431,6 +436,7 @@ func NewGroup (
 ) *GroupArtifact {
 	artifact := &GroupArtifact {}
 	artifact.Key = key
+	artifact.ID = abs.NextArtifactID()
 	artifact.Name = name
 	artifact.Arise = arise
 	return artifact
@@ -536,11 +542,11 @@ type SingleTransformBase struct {
 
 type MultiTransformBase struct {
 	TransformBase
-	sources []abs.Artifact
+	Sources []abs.Artifact
 }
 
 func (base *MultiTransformBase) AddSource(source abs.Artifact) {
-	base.sources = append(base.sources, source)
+	base.Sources = append(base.Sources, source)
 }
 
 // ---------------------------------------- Action ----------------------------------------
