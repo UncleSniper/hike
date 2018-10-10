@@ -90,9 +90,23 @@ func (printer *ErrorPrinter) Frame(frame BuildFrame, level uint) {
 	}
 }
 
+func (printer *ErrorPrinter) Location(location *loc.Location) {
+	if printer.firstError == nil {
+		str, err := location.Format()
+		if err != nil {
+			printer.firstError = err
+			return
+		}
+		_, printer.firstError = fmt.Fprint(os.Stderr, str)
+	}
+}
+
 func (printer *ErrorPrinter) Inject(callback func(level uint) error, level uint) {
 	if printer.firstError == nil {
-		printer.firstError = callback(printer.level + level)
+		err := callback(printer.level + level)
+		if printer.firstError == nil {
+			printer.firstError = err
+		}
 	}
 }
 
@@ -150,6 +164,7 @@ type Action interface {
 
 type Goal struct {
 	Name string
+	Label string
 	Arise *AriseRef
 	actions []Action
 }

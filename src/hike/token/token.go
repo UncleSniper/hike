@@ -136,3 +136,22 @@ func (token *Token) Reconstruct() (text string, err error) {
 	text = sink.String()
 	return
 }
+
+func NameType(ttype Type) string {
+	switch ttype {
+		case T_NAME:
+			return "name"
+		case T_STRING:
+			return "string"
+		case T_INT:
+			return "int"
+		case T_LBRACE:
+			return "'{'"
+		case T_RBRACE:
+			return "'}'"
+		case T_EOF:
+			return "end of input"
+		default:
+			panic(fmt.Sprintf("Unrecognized token type: %d", uint(ttype)))
+	}
+}

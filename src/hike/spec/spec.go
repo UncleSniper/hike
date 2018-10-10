@@ -29,10 +29,20 @@ func (duplicate *DuplicateGoalError) PrintBuildError(level uint) error {
 
 var _ abs.BuildError = &DuplicateGoalError{}
 
+type PendingResolver func() abs.BuildError
+
 type State struct {
 	Config *Config
 	PipelineTip *abs.Artifact
 	goals map[string]abs.Goal
+	pendingResolutions []PendingResolver
+}
+
+func NewState(config *Config) *State {
+	return &State {
+		Config: config,
+		goals: make(map[string]abs.Goal),
+	}
 }
 
 func (state *State) Goal(name string) abs.Goal {
@@ -50,6 +60,26 @@ func (state *State) RegisterGoal(goal abs.Goal, arise *abs.AriseRef) *DuplicateG
 	}
 	state.goals[goal.Name] = goal
 	return nil
+}
+
+func (state *State) SlateResolver(resolver PendingResolver) {
+	state.pendingResolutions = append(state.pendingResolutions, resolver)
+}
+
+func (state *State) FlushPendingResolutions() abs.BuildError {
+	for {
+		if len(state.pendingResolutions) == 0 {
+			return nil
+		}
+		pr := state.pendingResolutions
+		state.pendingResolutions = nil
+		for _, resolver := range pr {
+			err := resolver()
+			if err != nil {
+				return err
+			}
+		}
+	}
 }
 
 type Config struct {
