@@ -1,7 +1,6 @@
 package generic
 
 import (
-	"os"
 	"fmt"
 	"bufio"
 	"os/exec"
@@ -29,15 +28,11 @@ type CommandFailedError struct {
 	Output []byte
 }
 
-func (failed *CommandFailedError) PrintBuildError(level uint) (err error) {
-	_, err = fmt.Fprintln(os.Stderr, "Command")
-	if err != nil {
-		return
-	}
-	err = abs.IndentError(level + 1)
-	if err != nil {
-		return
-	}
+func (failed *CommandFailedError) PrintBuildError(level uint) error {
+	prn := &abs.ErrorPrinter{}
+	prn.Level(level)
+	prn.Println("Command")
+	prn.Indent(1)
 	first := true
 	var sep, delim string
 	for _, word := range failed.Argv {
@@ -52,60 +47,30 @@ func (failed *CommandFailedError) PrintBuildError(level uint) (err error) {
 		} else {
 			delim = "'"
 		}
-		_, err = fmt.Fprintf(os.Stderr, "%s%s%s%s", sep, delim, word, delim)
-		if err != nil {
-			return
-		}
+		prn.Printf("%s%s%s%s", sep, delim, word, delim)
 	}
-	_, err = fmt.Fprintln(os.Stderr)
-	if err != nil {
-		return
-	}
-	err = abs.IndentError(level)
-	if err != nil {
-		return
-	}
-	_, err = fmt.Fprintf(os.Stderr, "failed: %s", failed.Fault.Error())
-	if err != nil {
-		return
-	}
+	prn.Println()
+	prn.Indent(0)
+	prn.Printf("failed: %s", failed.Fault.Error())
 	if len(failed.Output) > 0 {
-		_, err = fmt.Fprintln(os.Stderr)
-		if err != nil {
-			return
-		}
-		err = abs.IndentError(level)
-		if err != nil {
-			return
-		}
-		_, err = fmt.Fprint(os.Stderr, "Output:")
-		if err != nil {
-			return
-		}
+		prn.Println()
+		prn.Indent(0)
+		prn.Print("Output:")
 		sout := string(failed.Output)
 		sread := strings.NewReader(sout)
 		scan := bufio.NewScanner(sread)
 		for scan.Scan() {
-			_, err = fmt.Fprintln(os.Stderr)
-			if err != nil {
-				return
-			}
-			err = abs.IndentError(level + 1)
-			if err != nil {
-				return
-			}
-			_, err = fmt.Fprint(os.Stderr, scan.Text())
-			if err != nil {
-				return
-			}
+			prn.Println()
+			prn.Indent(1)
+			prn.Print(scan.Text())
 		}
-		err = scan.Err()
+		err := scan.Err()
 		if err != nil {
-			return
+			return err
 		}
 	}
-	err = failed.PrintBacktrace(level)
-	return
+	failed.InjectBacktrace(prn, 0)
+	return prn.Done()
 }
 
 var _ abs.BuildError = &CommandFailedError{}

@@ -2,7 +2,6 @@ package concrete
 
 import (
 	"os"
-	"fmt"
 	"time"
 	abs "hike/abstract"
 )
@@ -14,11 +13,7 @@ func PrintArtifactErrorFrameBase(level uint, action string, artifact abs.Artifac
 	prn.Level(level)
 	prn.Printf("%s artifact\n", action)
 	prn.Indent(1)
-	prn.Printf(
-		"%s [%s]\n",
-		artifact.DisplayName(),
-		artifact.ArtifactKey().Unified(),
-	)
+	prn.Printf("%s [%s]\n", artifact.DisplayName(), artifact.ArtifactKey().Unified())
 	prn.Indent(0)
 	prn.Arise(artifact.ArtifactArise(), 0)
 	return prn.Done()
@@ -48,25 +43,15 @@ type ApplyTransformFrame struct {
 	Transform abs.Transform
 }
 
-func (frame *ApplyTransformFrame) PrintErrorFrame(level uint) (err error) {
-	_, err = fmt.Fprintln(os.Stderr, "applying transform")
-	if err != nil {
-		return
-	}
-	err = abs.IndentError(level + 1)
-	if err != nil {
-		return
-	}
-	_, err = fmt.Fprintln(os.Stderr, frame.Transform.TransformDescr())
-	if err != nil {
-		return
-	}
-	err = abs.IndentError(level)
-	if err != nil {
-		return
-	}
-	err = frame.Transform.TransformArise().PrintArise(level)
-	return
+func (frame *ApplyTransformFrame) PrintErrorFrame(level uint) error {
+	prn := &abs.ErrorPrinter{}
+	prn.Level(level)
+	prn.Println("applying transform")
+	prn.Indent(1)
+	prn.Println(frame.Transform.TransformDescr())
+	prn.Indent(0)
+	prn.Arise(frame.Transform.TransformArise(), 0)
+	return prn.Done()
 }
 
 var _ abs.BuildFrame = &ApplyTransformFrame{}
@@ -75,13 +60,11 @@ type AttainGoalFrame struct {
 	Goal *abs.Goal
 }
 
-func (frame *AttainGoalFrame) PrintErrorFrame(level uint) (err error) {
-	_, err = fmt.Fprintf(os.Stderr, "attaining goal '%s' ", frame.Goal.Name)
-	if err != nil {
-		return
-	}
-	err = frame.Goal.Arise.PrintArise(level)
-	return
+func (frame *AttainGoalFrame) PrintErrorFrame(level uint) error {
+	prn := &abs.ErrorPrinter{}
+	prn.Printf("attaining goal '%s' ", frame.Goal.Name)
+	prn.Arise(frame.Goal.Arise, level)
+	return prn.Done()
 }
 
 var _ abs.BuildFrame = &AttainGoalFrame{}
@@ -90,13 +73,11 @@ type PerformActionFrame struct {
 	Action abs.Action
 }
 
-func (frame *PerformActionFrame) PrintErrorFrame(level uint) (err error) {
-	_, err = fmt.Fprintf(os.Stderr, "performing action '%s' ", frame.Action.SimpleDescr())
-	if err != nil {
-		return
-	}
-	err = frame.Action.ActionArise().PrintArise(level)
-	return
+func (frame *PerformActionFrame) PrintErrorFrame(level uint) error {
+	prn := &abs.ErrorPrinter{}
+	prn.Printf("performing action '%s' ", frame.Action.SimpleDescr())
+	prn.Arise(frame.Action.ActionArise(), level)
+	return prn.Done()
 }
 
 // ---------------------------------------- BuildError ----------------------------------------
@@ -109,23 +90,22 @@ func (err *BuildErrorBase) AddErrorFrame(frame abs.BuildFrame) {
 	err.frames = append(err.frames, frame)
 }
 
-func (base *BuildErrorBase) PrintBacktrace(level uint) (err error) {
+func (base *BuildErrorBase) PrintBacktrace(level uint) error {
 	count := len(base.frames)
+	prn := &abs.ErrorPrinter{}
+	prn.Level(level)
 	for i := 0; i < count; i++ {
-		_, err = fmt.Fprintln(os.Stderr)
-		if err != nil {
-			return
-		}
-		err = abs.IndentError(level)
-		if err != nil {
-			return
-		}
-		err = base.frames[i].PrintErrorFrame(level + 1)
-		if err != nil {
-			return
-		}
+		prn.Println()
+		prn.Indent(0)
+		prn.Frame(base.frames[i], 1)
 	}
-	return
+	return prn.Done()
+}
+
+func (base *BuildErrorBase) InjectBacktrace(printer *abs.ErrorPrinter, level uint) {
+	printer.Inject(func(innerLevel uint) error {
+		return base.PrintBacktrace(innerLevel)
+	}, level)
 }
 
 type NoGeneratorError struct {
@@ -133,34 +113,16 @@ type NoGeneratorError struct {
 	Artifact abs.Artifact
 }
 
-func (nogen *NoGeneratorError) PrintBuildError(level uint) (err error) {
-	_, err = fmt.Fprintln(os.Stderr, "Don't know how to obtain artifact")
-	if err != nil {
-		return
-	}
-	err = abs.IndentError(level + 1)
-	if err != nil {
-		return
-	}
-	_, err = fmt.Fprintf(
-		os.Stderr,
-		"%s [%s]\n",
-		nogen.Artifact.DisplayName(),
-		nogen.Artifact.ArtifactKey().Unified(),
-	)
-	if err != nil {
-		return
-	}
-	err = abs.IndentError(level)
-	if err != nil {
-		return
-	}
-	err = nogen.Artifact.ArtifactArise().PrintArise(level)
-	if err != nil {
-		return
-	}
-	err = nogen.PrintBacktrace(level)
-	return
+func (nogen *NoGeneratorError) PrintBuildError(level uint) error {
+	prn := &abs.ErrorPrinter{}
+	prn.Level(level)
+	prn.Println("Don't know how to obtain artifact")
+	prn.Indent(1)
+	prn.Printf("%s [%s]\n", nogen.Artifact.DisplayName(), nogen.Artifact.ArtifactKey().Unified())
+	prn.Indent(0)
+	prn.Arise(nogen.Artifact.ArtifactArise(), 0)
+	nogen.InjectBacktrace(prn, 0)
+	return prn.Done()
 }
 
 var _ abs.BuildError = &NoGeneratorError{}
@@ -171,29 +133,16 @@ type CannotStatError struct {
 	OSError error
 }
 
-func (cannot *CannotStatError) PrintBuildError(level uint) (err error) {
-	_, err = fmt.Fprintln(os.Stderr, "Failed to stat file")
-	if err != nil {
-		return
-	}
-	err = abs.IndentError(level + 1)
-	if err != nil {
-		return
-	}
-	_, err = fmt.Fprintln(os.Stderr, cannot.Path)
-	if err != nil {
-		return
-	}
-	err = abs.IndentError(level)
-	if err != nil {
-		return
-	}
-	_, err = fmt.Fprintf(os.Stderr, "because: %s", cannot.OSError.Error())
-	if err != nil {
-		return
-	}
-	err = cannot.PrintBacktrace(level)
-	return
+func (cannot *CannotStatError) PrintBuildError(level uint) error {
+	prn := &abs.ErrorPrinter{}
+	prn.Level(level)
+	prn.Println("Failed to stat file")
+	prn.Indent(1)
+	prn.Println(cannot.Path)
+	prn.Indent(0)
+	prn.Printf("because: %s", cannot.OSError.Error())
+	cannot.InjectBacktrace(prn, 0)
+	return prn.Done()
 }
 
 var _ abs.BuildError = &CannotStatError{}

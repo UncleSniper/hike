@@ -22,29 +22,18 @@ type AriseRef struct {
 	Location *loc.Location
 }
 
-func (ref *AriseRef) PrintArise(level uint) (err error) {
-	_, err = fmt.Fprintln(os.Stderr, "arising from")
-	if err != nil {
-		return
-	}
-	err = IndentError(level + 1)
-	if err != nil {
-		return
-	}
-	_, err = fmt.Fprintln(os.Stderr, ref.Text)
-	if err != nil {
-		return
-	}
-	err = IndentError(level)
-	if err != nil {
-		return
-	}
+func (ref *AriseRef) PrintArise(level uint) error {
+	prn := &ErrorPrinter{}
+	prn.Println("arising from")
+	prn.Indent(level + 1)
+	prn.Println(ref.Text)
+	prn.Indent(level)
 	location, err := ref.Location.Format()
 	if err != nil {
-		return
+		return err
 	}
-	_, err = fmt.Fprintf(os.Stderr, "at %s", location)
-	return
+	prn.Printf("at %s", location)
+	return prn.Done()
 }
 
 type BuildFrame interface {
@@ -92,6 +81,18 @@ func (printer *ErrorPrinter) Indent(level uint) {
 func (printer *ErrorPrinter) Arise(arise *AriseRef, level uint) {
 	if printer.firstError == nil {
 		printer.firstError = arise.PrintArise(printer.level + level)
+	}
+}
+
+func (printer *ErrorPrinter) Frame(frame BuildFrame, level uint) {
+	if printer.firstError == nil {
+		printer.firstError = frame.PrintErrorFrame(printer.level + level)
+	}
+}
+
+func (printer *ErrorPrinter) Inject(callback func(level uint) error, level uint) {
+	if printer.firstError == nil {
+		printer.firstError = callback(printer.level + level)
 	}
 }
 

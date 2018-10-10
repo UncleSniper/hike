@@ -1,8 +1,6 @@
 package spec
 
 import (
-	"os"
-	"fmt"
 	abs "hike/abstract"
 	con "hike/concrete"
 )
@@ -14,41 +12,19 @@ type DuplicateGoalError struct {
 	NewGoal abs.Goal
 }
 
-func (duplicate *DuplicateGoalError) PrintBuildError(level uint) (err error) {
-	_, err = fmt.Fprintln(os.Stderr, "Goal name clash:", duplicate.OldGoal.Name)
-	if err != nil {
-		return
-	}
-	err = abs.IndentError(level)
-	if err != nil {
-		return
-	}
-	_, err = fmt.Fprint(os.Stderr, "between old goal ")
-	if err != nil {
-		return
-	}
-	err = duplicate.OldGoal.Arise.PrintArise(level)
-	if err != nil {
-		return
-	}
-	_, err = fmt.Fprintln(os.Stderr)
-	if err != nil {
-		return
-	}
-	err = abs.IndentError(level)
-	if err != nil {
-		return
-	}
-	_, err = fmt.Fprint(os.Stderr, "and new goal ")
-	if err != nil {
-		return
-	}
-	err = duplicate.NewGoal.Arise.PrintArise(level)
-	if err != nil {
-		return
-	}
-	err = duplicate.PrintBacktrace(level)
-	return
+func (duplicate *DuplicateGoalError) PrintBuildError(level uint) error {
+	prn := &abs.ErrorPrinter{}
+	prn.Level(level)
+	prn.Println("Goal name clash:", duplicate.OldGoal.Name)
+	prn.Indent(0)
+	prn.Print("between old goal ")
+	prn.Arise(duplicate.OldGoal.Arise, 0)
+	prn.Println()
+	prn.Indent(0)
+	prn.Print("and new goal ")
+	prn.Arise(duplicate.NewGoal.Arise, 0)
+	duplicate.InjectBacktrace(prn, 0)
+	return prn.Done()
 }
 
 var _ abs.BuildError = &DuplicateGoalError{}
