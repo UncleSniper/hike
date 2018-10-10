@@ -24,7 +24,73 @@ func ParseGoal(parser *prs.Parser) *abs.Goal {
 		},
 	}
 	parser.Next()
-	//TODO
+	switch {
+		case parser.IsAction():
+			action := parser.Action()
+			if action == nil {
+				parser.Frame("goal", start)
+				return nil
+			}
+			goal.AddAction(action)
+		case parser.Token.Type == tok.T_LBRACE:
+			parser.Next()
+			haveLabel := false
+			if parser.IsKeyword("label") {
+				labelLocation := &parser.Token.Location
+				parser.Next()
+				if !parser.Expect(tok.T_STRING) {
+					parser.Frame("'label' property", labelLocation)
+					parser.Frame("goal", start)
+					return nil
+				}
+				goal.Label = parser.Token.Text
+				parser.Next()
+				haveLabel = true
+			}
+			for {
+				switch {
+					case parser.IsAction():
+						action := parser.Action()
+						if action == nil {
+							parser.Frame("goal", start)
+							return nil
+						}
+						goal.AddAction(action)
+					case parser.Token.Type == tok.T_RBRACE:
+						if goal.ActionCount() == 0 {
+							if haveLabel {
+								parser.Die("action")
+							} else {
+								parser.Die("'label' or action")
+							}
+							parser.Frame("goal", start)
+							return nil
+						}
+						parser.Next()
+						break
+					default:
+						if haveLabel {
+							if goal.ActionCount() > 0 {
+								parser.Die("action or '}'")
+							} else {
+								parser.Die("action")
+							}
+						} else {
+							if goal.ActionCount() > 0 {
+								parser.Die("'label', action or '}'")
+							} else {
+								parser.Die("'label' or action")
+							}
+						}
+						parser.Frame("goal", start)
+						return nil
+				}
+			}
+		default:
+			parser.Die("action or '{'")
+			parser.Frame("goal", start)
+			return nil
+	}
 	return goal
 }
 

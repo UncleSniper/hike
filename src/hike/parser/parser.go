@@ -111,6 +111,10 @@ func New(
 	}
 }
 
+func (parser *Parser) SpecState() *spc.State {
+	return parser.specState
+}
+
 func (parser *Parser) Next() {
 	if parser.Token.Type != tok.T_EOF {
 		parser.Token = <-parser.lexer
@@ -140,6 +144,10 @@ func (parser *Parser) ExpectKeyword(name string) bool {
 	}
 	parser.Die(fmt.Sprintf("'%s'", name))
 	return false
+}
+
+func (parser *Parser) IsKeyword(name string) bool {
+	return parser.Token.Type == tok.T_NAME && parser.Token.Text == name
 }
 
 func (parser *Parser) Fail(fault abs.BuildError) {
@@ -172,6 +180,10 @@ func (parser *Parser) Top() {
 	}
 }
 
+func (parser *Parser) IsTop() bool {
+	return parser.Token.Type == tok.T_NAME && parser.knownStructures.TopParser(parser.Token.Text) != nil
+}
+
 func (parser *Parser) Action() abs.Action {
 	if !parser.Expect(tok.T_NAME) {
 		return nil
@@ -183,4 +195,8 @@ func (parser *Parser) Action() abs.Action {
 	} else {
 		return cb(parser)
 	}
+}
+
+func (parser *Parser) IsAction() bool {
+	return parser.Token.Type == tok.T_NAME && parser.knownStructures.ActionParser(parser.Token.Text) != nil
 }

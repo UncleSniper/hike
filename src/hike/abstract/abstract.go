@@ -177,6 +177,10 @@ func (goal *Goal) Actions() []Action {
 	return goal.actions
 }
 
+func (goal *Goal) ActionCount() int {
+	return len(goal.actions)
+}
+
 type Plan struct {
 	steps []Step
 	knownUpToDate map[ArtifactID]bool

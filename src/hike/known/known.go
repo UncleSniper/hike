@@ -7,6 +7,7 @@ import (
 
 func RegisterCoreStructures(known *prs.KnownStructures) {
 	known.RegisterTopParser("goal", syn.TopGoal)
+	known.RegisterActionParser("attain", syn.TopAction)
 }
 
 func RegisterAllKnownStructures(known *prs.KnownStructures) {
