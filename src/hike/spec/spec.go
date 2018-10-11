@@ -57,12 +57,64 @@ func (no *NoSuchGoalError) PrintBuildError(level uint) error {
 
 var _ abs.BuildError = &NoSuchGoalError{}
 
+type DuplicateArtifactError struct {
+	con.BuildErrorBase
+	RegisterArise *abs.AriseRef
+	OldArtifact abs.Artifact
+	NewArtifact abs.Artifact
+}
+
+func (duplicate *DuplicateArtifactError) PrintBuildError(level uint) error {
+	prn := &abs.ErrorPrinter{}
+	prn.Level(level)
+	prn.Println("Artifact key clash:", duplicate.OldArtifact.ArtifactKey().Unified())
+	prn.Indent(1)
+	prn.Arise(duplicate.RegisterArise, 1)
+	prn.Println()
+	prn.Indent(1)
+	prn.Print("between old artifact ")
+	prn.Arise(duplicate.OldArtifact.ArtifactArise(), 1)
+	prn.Println()
+	prn.Indent(1)
+	prn.Print("and new artifact ")
+	prn.Arise(duplicate.NewArtifact.ArtifactArise(), 1)
+	duplicate.InjectBacktrace(prn, 0)
+	return prn.Done()
+}
+
+var _ abs.BuildError = &DuplicateArtifactError{}
+
+type NoSuchArtifactError struct {
+	con.BuildErrorBase
+	Key *abs.ArtifactKey
+	ReferenceLocation *loc.Location
+	ReferenceArise *abs.AriseRef
+}
+
+func (no *NoSuchArtifactError) PrintBuildError(level uint) error {
+	prn := &abs.ErrorPrinter{}
+	prn.Level(level)
+	prn.Println("No such artifact:", no.Key.Unified())
+	prn.Indent(1)
+	prn.Print("referenced at ")
+	prn.Location(no.ReferenceLocation)
+	prn.Println()
+	prn.Indent(1)
+	prn.Print("reference ")
+	prn.Arise(no.ReferenceArise, 1)
+	no.InjectBacktrace(prn, 0)
+	return prn.Done()
+}
+
+var _ abs.BuildError = &NoSuchArtifactError{}
+
 type PendingResolver func() abs.BuildError
 
 type State struct {
 	Config *Config
-	PipelineTip *abs.Artifact
+	PipelineTip abs.Artifact
 	goals map[string]*abs.Goal
+	artifacts map[string]abs.Artifact
 	pendingResolutions []PendingResolver
 }
 
@@ -70,6 +122,7 @@ func NewState(config *Config) *State {
 	return &State {
 		Config: config,
 		goals: make(map[string]*abs.Goal),
+		artifacts: make(map[string]abs.Artifact),
 	}
 }
 
@@ -87,6 +140,24 @@ func (state *State) RegisterGoal(goal *abs.Goal, arise *abs.AriseRef) *Duplicate
 		}
 	}
 	state.goals[goal.Name] = goal
+	return nil
+}
+
+func (state *State) Artifact(key *abs.ArtifactKey) abs.Artifact {
+	return state.artifacts[key.Unified()]
+}
+
+func (state *State) RegisterArtifact(artifact abs.Artifact, arise *abs.AriseRef) *DuplicateArtifactError {
+	ks := artifact.ArtifactKey().Unified()
+	old, present := state.artifacts[ks]
+	if present {
+		return &DuplicateArtifactError {
+			RegisterArise: arise,
+			OldArtifact: old,
+			NewArtifact: artifact,
+		}
+	}
+	state.artifacts[ks] = artifact
 	return nil
 }
 

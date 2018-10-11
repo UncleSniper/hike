@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strings"
 	spc "hike/spec"
 	tok "hike/token"
 	loc "hike/location"
@@ -69,16 +70,22 @@ type Parser struct {
 
 type TopParser func(parser *Parser)
 type ActionParser func(parser *Parser) abs.Action
+type ArtifactParser func(parser *Parser) abs.Artifact
+type TransformParser func(parser *Parser) abs.Transform
 
 type KnownStructures struct {
 	top map[string]TopParser
 	action map[string]ActionParser
+	artifact map[string]ArtifactParser
+	transform map[string]TransformParser
 }
 
 func NewKnownStructures() *KnownStructures {
 	return &KnownStructures {
 		top: make(map[string]TopParser),
 		action: make(map[string]ActionParser),
+		artifact: make(map[string]ArtifactParser),
+		transform: make(map[string]TransformParser),
 	}
 }
 
@@ -96,6 +103,22 @@ func (known *KnownStructures) RegisterActionParser(initiator string, parser Acti
 
 func (known *KnownStructures) ActionParser(initiator string) ActionParser {
 	return known.action[initiator]
+}
+
+func (known *KnownStructures) RegisterArtifactParser(initiator string, parser ArtifactParser) {
+	known.artifact[initiator] = parser
+}
+
+func (known *KnownStructures) ArtifactParser(initiator string) ArtifactParser {
+	return known.artifact[initiator]
+}
+
+func (known *KnownStructures) RegisterTransformParser(initiator string, parser TransformParser) {
+	known.transform[initiator] = parser
+}
+
+func (known *KnownStructures) TransformParser(initiator string) TransformParser {
+	return known.transform[initiator]
 }
 
 func New(
@@ -121,6 +144,14 @@ func (parser *Parser) Next() {
 	}
 }
 
+func (parser *Parser) Error() abs.BuildError {
+	return parser.firstError
+}
+
+func (parser *Parser) IsError() bool {
+	return parser.firstError != nil
+}
+
 func (parser *Parser) Die(expected string) {
 	if parser.firstError != nil {
 		parser.firstError = &SyntaxError {
@@ -135,6 +166,14 @@ func (parser *Parser) Expect(ttype tok.Type) bool {
 		return true
 	}
 	parser.Die(tok.NameType(ttype))
+	return false
+}
+
+func (parser *Parser) ExpectExp(ttype tok.Type, explanation string) bool {
+	if parser.Token.Type == ttype {
+		return true
+	}
+	parser.Die(fmt.Sprintf("%s (%s)", tok.NameType(ttype), explanation))
 	return false
 }
 
@@ -199,4 +238,124 @@ func (parser *Parser) Action() abs.Action {
 
 func (parser *Parser) IsAction() bool {
 	return parser.Token.Type == tok.T_NAME && parser.knownStructures.ActionParser(parser.Token.Text) != nil
+}
+
+func (parser *Parser) Artifact() abs.Artifact {
+	if !parser.Expect(tok.T_NAME) {
+		return nil
+	}
+	cb := parser.knownStructures.ArtifactParser(parser.Token.Text)
+	if cb == nil {
+		parser.Die("artifact")
+		return nil
+	} else {
+		return cb(parser)
+	}
+}
+
+func (parser *Parser) IsArtifact() bool {
+	return parser.Token.Type == tok.T_NAME && parser.knownStructures.ArtifactParser(parser.Token.Text) != nil
+}
+
+func (parser *Parser) Transform() abs.Transform {
+	if !parser.Expect(tok.T_NAME) {
+		return nil
+	}
+	cb := parser.knownStructures.TransformParser(parser.Token.Text)
+	if cb == nil {
+		parser.Die("transform")
+		return nil
+	} else {
+		return cb(parser)
+	}
+}
+
+func (parser *Parser) IsTransform() bool {
+	return parser.Token.Type == tok.T_NAME && parser.knownStructures.TransformParser(parser.Token.Text) != nil
+}
+
+// ---------------------------------------- intrinsics ----------------------------------------
+
+type ArtifactRef interface {
+	InjectArtifact(specState *spc.State, injector func(abs.Artifact))
+}
+
+type PresentArtifactRef struct {
+	Artifact abs.Artifact
+}
+
+func (ref *PresentArtifactRef) InjectArtifact(specState *spc.State, injector func(abs.Artifact)) {
+	injector(ref.Artifact)
+}
+
+var _ ArtifactRef = &PresentArtifactRef{}
+
+type PendingArtifactRef struct {
+	Key *abs.ArtifactKey
+	ReferenceLocation *loc.Location
+	ReferenceArise *abs.AriseRef
+}
+
+func (ref *PendingArtifactRef) InjectArtifact(specState *spc.State, injector func(abs.Artifact)) {
+	specState.SlateResolver(func() abs.BuildError {
+		artifact := specState.Artifact(ref.Key)
+		if artifact != nil {
+			injector(artifact)
+			return nil
+		} else {
+			return &spc.NoSuchArtifactError {
+				Key: ref.Key,
+				ReferenceLocation: ref.ReferenceLocation,
+				ReferenceArise: ref.ReferenceArise,
+			}
+		}
+	})
+}
+
+var _ ArtifactRef = &PendingArtifactRef{}
+
+func SplitArtifactKey(ks string, config *spc.Config) *abs.ArtifactKey {
+	key := &abs.ArtifactKey{}
+	pos := strings.Index(ks, "::")
+	if pos < 0 {
+		key.Project = config.EffectiveProjectName()
+		key.Artifact = ks
+	} else {
+		key.Project = ks[:pos]
+		key.Artifact = ks[pos + 2:]
+	}
+	return key
+}
+
+func (parser *Parser) ArtifactRef(arise *abs.AriseRef) ArtifactRef {
+	switch {
+		case parser.Token.Type == tok.T_STRING:
+			specState := parser.SpecState()
+			key := SplitArtifactKey(parser.Token.Text, specState.Config)
+			refLocation := &parser.Token.Location
+			parser.Next()
+			artifact := specState.Artifact(key)
+			if artifact != nil {
+				return &PresentArtifactRef {
+					Artifact: artifact,
+				}
+			} else {
+				return &PendingArtifactRef {
+					Key: key,
+					ReferenceLocation: refLocation,
+					ReferenceArise: arise,
+				}
+			}
+		case parser.IsArtifact():
+			artifact := parser.Artifact()
+			if artifact == nil {
+				return nil
+			}
+			return &PresentArtifactRef {
+				Artifact: artifact,
+			}
+		default:
+			parser.Die("string (artifact key) or artifact")
+			return nil
+	}
 }

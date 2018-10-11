@@ -12,7 +12,7 @@ func ParseGoal(parser *prs.Parser) *abs.Goal {
 	}
 	start := &parser.Token.Location
 	parser.Next()
-	if !parser.Expect(tok.T_NAME) {
+	if !parser.ExpectExp(tok.T_NAME, "goal name") {
 		parser.Frame("goal", start)
 		return nil
 	}
@@ -24,6 +24,11 @@ func ParseGoal(parser *prs.Parser) *abs.Goal {
 		},
 	}
 	parser.Next()
+	err := parser.SpecState().RegisterGoal(goal, goal.Arise)
+	if err != nil {
+		parser.Fail(err)
+		return nil
+	}
 	switch {
 		case parser.IsAction():
 			action := parser.Action()
@@ -38,7 +43,7 @@ func ParseGoal(parser *prs.Parser) *abs.Goal {
 			if parser.IsKeyword("label") {
 				labelLocation := &parser.Token.Location
 				parser.Next()
-				if !parser.Expect(tok.T_STRING) {
+				if !parser.ExpectExp(tok.T_STRING, "goal label") {
 					parser.Frame("'label' property", labelLocation)
 					parser.Frame("goal", start)
 					return nil

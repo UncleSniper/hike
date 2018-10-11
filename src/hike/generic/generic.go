@@ -156,6 +156,24 @@ func (transform *SingleCommandTransform) Plan(destination abs.Artifact, plan *ab
 
 var _ abs.Transform = &SingleCommandTransform{}
 
+func NewSingleCommandTransform(
+	description string,
+	arise *abs.AriseRef,
+	source abs.Artifact,
+	commandLine VariableCommandLine,
+	loud bool,
+	suffixIsDestination bool,
+) *SingleCommandTransform {
+	transform := &SingleCommandTransform {}
+	transform.Description = description
+	transform.Arise = arise
+	transform.Source = source
+	transform.CommandLine = commandLine
+	transform.Loud = loud
+	transform.SuffixIsDestination = suffixIsDestination
+	return transform
+}
+
 type MultiCommandTransform struct {
 	con.MultiTransformBase
 	CommandTransformBase
@@ -169,3 +187,19 @@ func (transform *MultiCommandTransform) Plan(destination abs.Artifact, plan *abs
 }
 
 var _ abs.Transform = &MultiCommandTransform{}
+
+func NewMultiCommandTransform(
+	description string,
+	arise *abs.AriseRef,
+	commandLine VariableCommandLine,
+	loud bool,
+	suffixIsDestination bool,
+) *MultiCommandTransform {
+	transform := &MultiCommandTransform {}
+	transform.Description = description
+	transform.Arise = arise
+	transform.CommandLine = commandLine
+	transform.Loud = loud
+	transform.SuffixIsDestination = suffixIsDestination
+	return transform
+}

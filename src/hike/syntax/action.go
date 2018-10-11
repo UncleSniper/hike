@@ -14,7 +14,7 @@ func ParseAttainAction(parser *prs.Parser) *con.AttainAction {
 	}
 	start := &parser.Token.Location
 	parser.Next()
-	if !parser.Expect(tok.T_NAME) {
+	if !parser.ExpectExp(tok.T_NAME, "goal name") {
 		parser.Frame("attain action", start)
 		return nil
 	}
@@ -38,10 +38,7 @@ func ParseAttainAction(parser *prs.Parser) *con.AttainAction {
 				return &spc.NoSuchGoalError {
 					Name: name,
 					ReferenceLocation: refLocation,
-					ReferenceArise: &abs.AriseRef {
-						Text: "'attain' stanza",
-						Location: start,
-					},
+					ReferenceArise: action.Arise,
 				}
 			}
 		})
@@ -49,6 +46,43 @@ func ParseAttainAction(parser *prs.Parser) *con.AttainAction {
 	return action
 }
 
-func TopAction(parser *prs.Parser) abs.Action {
-	return ParseAttainAction(parser)
+func TopAttainAction(parser *prs.Parser) abs.Action {
+	action := ParseAttainAction(parser)
+	if action != nil {
+		return action
+	} else {
+		return nil
+	}
+}
+
+func ParseRequireAction(parser *prs.Parser) *con.RequireAction {
+	if !parser.ExpectKeyword("require") {
+		return nil
+	}
+	start := &parser.Token.Location
+	parser.Next()
+	arise := &abs.AriseRef {
+		Text: "'require' stanza",
+		Location: start,
+	}
+	ref := parser.ArtifactRef(arise)
+	if ref == nil {
+		parser.Frame("require action", start)
+		return nil
+	}
+	action := &con.RequireAction {}
+	action.Arise = arise
+	ref.InjectArtifact(parser.SpecState(), func(artifact abs.Artifact) {
+		action.Artifact = artifact
+	})
+	return action
+}
+
+func TopRequireAction(parser *prs.Parser) abs.Action {
+	action := ParseRequireAction(parser)
+	if action != nil {
+		return action
+	} else {
+		return nil
+	}
 }
