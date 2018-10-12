@@ -163,7 +163,7 @@ func (parser *Parser) IsError() bool {
 }
 
 func (parser *Parser) Die(expected string) {
-	if parser.firstError != nil {
+	if parser.firstError == nil {
 		parser.firstError = &SyntaxError {
 			Near: parser.Token,
 			Expected: expected,

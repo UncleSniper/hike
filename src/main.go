@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"flag"
+	"time"
 	herr "hike/error"
 	spc "hike/spec"
 	knw "hike/known"
@@ -29,11 +30,26 @@ func die(err herr.BuildError) {
 	os.Exit(1)
 }
 
+func numWidth(n int) (exp int) {
+	for n > 0 {
+		n /= 10
+		exp++
+	}
+	if exp == 0 {
+		exp = 1
+	}
+	return
+}
+
 func main() {
 	var hikefileName string
 	const hikefileUsage = "Filename of hikefile to read for root project."
 	flag.StringVar(&hikefileName, "hikefile", DEFAULT_HIKEFILE, hikefileUsage)
 	flag.StringVar(&hikefileName, "f", DEFAULT_HIKEFILE, hikefileUsage)
+	var pretend bool
+	const pretendUsage = "Print the plan, but do not execute it."
+	flag.BoolVar(&pretend, "pretend", false, pretendUsage)
+	flag.BoolVar(&pretend, "p", false, pretendUsage)
 	flag.Parse()
 	cwd, nerr := os.Getwd()
 	if nerr != nil {
@@ -78,5 +94,23 @@ func main() {
 			}
 		}
 	}
-	//TODO
+	stepCount := plan.StepCount()
+	stepIndexWidth := numWidth(stepCount)
+	startTime := time.Now()
+	for stepIndex, step := range plan.Steps() {
+		fmt.Printf("%*d/%d %s\n", stepIndexWidth, stepIndex + 1, stepCount, step.SimpleDescr())
+		if !pretend {
+			err = step.Perform()
+			if err != nil {
+				die(err)
+			}
+		}
+	}
+	duration := time.Since(startTime)
+	switch {
+		case stepCount == 0:
+			fmt.Println("Nandemonai yo.")
+		case !pretend:
+			fmt.Printf("Success after %s.\n", duration.String())
+	}
 }

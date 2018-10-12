@@ -87,6 +87,10 @@ func (plan *Plan) AddStep(step Step) {
 	plan.steps = append(plan.steps, step)
 }
 
+func (plan *Plan) Steps() []Step {
+	return plan.steps
+}
+
 func (plan *Plan) StepCount() int {
 	return len(plan.steps)
 }
