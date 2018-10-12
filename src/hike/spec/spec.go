@@ -31,6 +31,10 @@ func (duplicate *DuplicateGoalError) PrintBuildError(level uint) error {
 	return prn.Done()
 }
 
+func (duplicate *DuplicateGoalError) BuildErrorLocation() *loc.Location {
+	return duplicate.RegisterArise.Location
+}
+
 var _ abs.BuildError = &DuplicateGoalError{}
 
 type NoSuchGoalError struct {
@@ -53,6 +57,10 @@ func (no *NoSuchGoalError) PrintBuildError(level uint) error {
 	prn.Arise(no.ReferenceArise, 1)
 	no.InjectBacktrace(prn, 0)
 	return prn.Done()
+}
+
+func (no *NoSuchGoalError) BuildErrorLocation() *loc.Location {
+	return no.ReferenceLocation
 }
 
 var _ abs.BuildError = &NoSuchGoalError{}
@@ -82,6 +90,10 @@ func (duplicate *DuplicateArtifactError) PrintBuildError(level uint) error {
 	return prn.Done()
 }
 
+func (duplicate *DuplicateArtifactError) BuildErrorLocation() *loc.Location {
+	return duplicate.RegisterArise.Location
+}
+
 var _ abs.BuildError = &DuplicateArtifactError{}
 
 type NoSuchArtifactError struct {
@@ -104,6 +116,10 @@ func (no *NoSuchArtifactError) PrintBuildError(level uint) error {
 	prn.Arise(no.ReferenceArise, 1)
 	no.InjectBacktrace(prn, 0)
 	return prn.Done()
+}
+
+func (no *NoSuchArtifactError) BuildErrorLocation() *loc.Location {
+	return no.ReferenceLocation
 }
 
 var _ abs.BuildError = &NoSuchArtifactError{}

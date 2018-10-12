@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"os/exec"
 	"strings"
+	loc "hike/location"
 	abs "hike/abstract"
 	con "hike/concrete"
 )
@@ -26,6 +27,7 @@ type CommandFailedError struct {
 	Argv []string
 	Fault error
 	Output []byte
+	ExecArise *abs.AriseRef
 }
 
 func (failed *CommandFailedError) PrintBuildError(level uint) error {
@@ -51,7 +53,10 @@ func (failed *CommandFailedError) PrintBuildError(level uint) error {
 	}
 	prn.Println()
 	prn.Indent(0)
-	prn.Printf("failed: %s", failed.Fault.Error())
+	prn.Printf("failed: %s\n", failed.Fault.Error())
+	prn.Indent(0)
+	prn.Print("during execution ")
+	prn.Arise(failed.ExecArise, 0)
 	if len(failed.Output) > 0 {
 		prn.Println()
 		prn.Indent(0)
@@ -73,6 +78,10 @@ func (failed *CommandFailedError) PrintBuildError(level uint) error {
 	return prn.Done()
 }
 
+func (failed *CommandFailedError) BuildErrorLocation() *loc.Location {
+	return failed.ExecArise.Location
+}
+
 var _ abs.BuildError = &CommandFailedError{}
 
 // ---------------------------------------- Step ----------------------------------------
@@ -85,6 +94,7 @@ type CommandStep struct {
 	Destination abs.Artifact
 	CommandLine VariableCommandLine
 	Loud bool
+	CommandArise *abs.AriseRef
 }
 
 func (step *CommandStep) Perform() abs.BuildError {
@@ -101,6 +111,7 @@ func (step *CommandStep) Perform() abs.BuildError {
 				Argv: argv,
 				Fault: err,
 				Output: out,
+				ExecArise: step.CommandArise,
 			}
 		}
 		if step.Loud {
@@ -125,12 +136,14 @@ func (base *CommandTransformBase) PlanCommandTransform(
 	sources []abs.Artifact,
 	destination abs.Artifact,
 	plan *abs.Plan,
+	transformArise *abs.AriseRef,
 ) {
 	step := &CommandStep {
 		Sources: sources,
 		Destination: destination,
 		CommandLine: base.CommandLine,
 		Loud: base.Loud,
+		CommandArise: transformArise,
 	}
 	var suffix string
 	if base.SuffixIsDestination || len(sources) != 1 {
@@ -149,7 +162,13 @@ type SingleCommandTransform struct {
 
 func (transform *SingleCommandTransform) Plan(destination abs.Artifact, plan *abs.Plan) abs.BuildError {
 	return con.PlanSingleTransform(transform, transform.Source, destination, plan, func() abs.BuildError {
-		transform.PlanCommandTransform(transform.Description, []abs.Artifact{transform.Source}, destination, plan)
+		transform.PlanCommandTransform(
+			transform.Description,
+			[]abs.Artifact{transform.Source},
+			destination,
+			plan,
+			transform.TransformArise(),
+		)
 		return nil
 	})
 }
@@ -181,7 +200,13 @@ type MultiCommandTransform struct {
 
 func (transform *MultiCommandTransform) Plan(destination abs.Artifact, plan *abs.Plan) abs.BuildError {
 	return con.PlanMultiTransform(transform, transform.Sources, destination, plan, func() abs.BuildError {
-		transform.PlanCommandTransform(transform.Description, transform.Sources, destination, plan)
+		transform.PlanCommandTransform(
+			transform.Description,
+			transform.Sources,
+			destination,
+			plan,
+			transform.TransformArise(),
+		)
 		return nil
 	})
 }

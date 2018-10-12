@@ -56,6 +56,10 @@ func (syntax *SyntaxError) PrintBuildError(level uint) error {
 	return prn.Done()
 }
 
+func (syntax *SyntaxError) BuildErrorLocation() *loc.Location {
+	return &syntax.Near.Location
+}
+
 var _ abs.BuildError = &SyntaxError{}
 
 // ---------------------------------------- Parser ----------------------------------------

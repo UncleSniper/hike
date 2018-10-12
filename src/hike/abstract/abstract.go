@@ -43,6 +43,7 @@ type BuildFrame interface {
 type BuildError interface {
 	PrintBuildError(level uint) error
 	AddErrorFrame(frame BuildFrame)
+	BuildErrorLocation() *loc.Location
 }
 
 type ErrorPrinter struct {
@@ -131,10 +132,10 @@ type Artifact interface {
 	DisplayName() string
 	ArtifactArise() *AriseRef
 	PathNames(sink []string) []string
-	EarliestModTime() (time.Time, BuildError, bool)
-	LatestModTime() (time.Time, BuildError, bool)
+	EarliestModTime(arise *AriseRef) (time.Time, BuildError, bool)
+	LatestModTime(arise *AriseRef) (time.Time, BuildError, bool)
 	Flatten() BuildError
-	Require(plan *Plan) BuildError
+	Require(plan *Plan, arise *AriseRef) BuildError
 }
 
 var nextArtifactID uint = 0

@@ -3,6 +3,7 @@ package concrete
 import (
 	"os"
 	"time"
+	loc "hike/location"
 	abs "hike/abstract"
 )
 
@@ -111,6 +112,7 @@ func (base *BuildErrorBase) InjectBacktrace(printer *abs.ErrorPrinter, level uin
 type NoGeneratorError struct {
 	BuildErrorBase
 	Artifact abs.Artifact
+	RequireArise *abs.AriseRef
 }
 
 func (nogen *NoGeneratorError) PrintBuildError(level uint) error {
@@ -121,8 +123,16 @@ func (nogen *NoGeneratorError) PrintBuildError(level uint) error {
 	prn.Printf("%s [%s]\n", nogen.Artifact.DisplayName(), nogen.Artifact.ArtifactKey().Unified())
 	prn.Indent(0)
 	prn.Arise(nogen.Artifact.ArtifactArise(), 0)
+	prn.Println()
+	prn.Indent(0)
+	prn.Print("for requisition ")
+	prn.Arise(nogen.RequireArise, 0)
 	nogen.InjectBacktrace(prn, 0)
 	return prn.Done()
+}
+
+func (nogen *NoGeneratorError) BuildErrorLocation() *loc.Location {
+	return nogen.RequireArise.Location
 }
 
 var _ abs.BuildError = &NoGeneratorError{}
@@ -131,6 +141,7 @@ type CannotStatError struct {
 	BuildErrorBase
 	Path string
 	OSError error
+	OperationArise *abs.AriseRef
 }
 
 func (cannot *CannotStatError) PrintBuildError(level uint) error {
@@ -140,9 +151,17 @@ func (cannot *CannotStatError) PrintBuildError(level uint) error {
 	prn.Indent(1)
 	prn.Println(cannot.Path)
 	prn.Indent(0)
+	prn.Print("in operation ")
+	prn.Arise(cannot.OperationArise, 0)
+	prn.Println()
+	prn.Indent(0)
 	prn.Printf("because: %s", cannot.OSError.Error())
 	cannot.InjectBacktrace(prn, 0)
 	return prn.Done()
+}
+
+func (cannot *CannotStatError) BuildErrorLocation() *loc.Location {
+	return cannot.OperationArise.Location
 }
 
 var _ abs.BuildError = &CannotStatError{}
@@ -186,7 +205,7 @@ func (artifact *FileArtifact) PathNames(sink []string) []string {
 	return append(sink, artifact.Path)
 }
 
-func (artifact *FileArtifact) ModTime() (stamp time.Time, err abs.BuildError, missing bool) {
+func (artifact *FileArtifact) ModTime(arise *abs.AriseRef) (stamp time.Time, err abs.BuildError, missing bool) {
 	info, oserr := os.Stat(artifact.Path)
 	if oserr == nil {
 		stamp = info.ModTime()
@@ -196,25 +215,26 @@ func (artifact *FileArtifact) ModTime() (stamp time.Time, err abs.BuildError, mi
 			err = &CannotStatError {
 				Path: artifact.Path,
 				OSError: oserr,
+				OperationArise: arise,
 			}
 		}
 	}
 	return
 }
 
-func (artifact *FileArtifact) EarliestModTime() (time.Time, abs.BuildError, bool) {
-	return artifact.ModTime()
+func (artifact *FileArtifact) EarliestModTime(arise *abs.AriseRef) (time.Time, abs.BuildError, bool) {
+	return artifact.ModTime(arise)
 }
 
-func (artifact *FileArtifact) LatestModTime() (time.Time, abs.BuildError, bool) {
-	return artifact.ModTime()
+func (artifact *FileArtifact) LatestModTime(arise *abs.AriseRef) (time.Time, abs.BuildError, bool) {
+	return artifact.ModTime(arise)
 }
 
 func (artifact *FileArtifact) Flatten() abs.BuildError {
 	return nil
 }
 
-func FileExists(path string) (exists bool, err abs.BuildError) {
+func FileExists(path string, arise *abs.AriseRef) (exists bool, err abs.BuildError) {
 	_, oserr := os.Lstat(path)
 	switch {
 		case oserr == nil:
@@ -223,12 +243,13 @@ func FileExists(path string) (exists bool, err abs.BuildError) {
 			err = &CannotStatError {
 				Path: path,
 				OSError: oserr,
+				OperationArise: arise,
 			}
 	}
 	return
 }
 
-func (artifact *FileArtifact) Require(plan *abs.Plan) (err abs.BuildError) {
+func (artifact *FileArtifact) Require(plan *abs.Plan, requireArise *abs.AriseRef) (err abs.BuildError) {
 	if plan.AlreadyUpToDate(artifact) {
 		return
 	}
@@ -240,7 +261,7 @@ func (artifact *FileArtifact) Require(plan *abs.Plan) (err abs.BuildError) {
 			})
 		}
 	} else {
-		exists, err := FileExists(artifact.Path)
+		exists, err := FileExists(artifact.Path, requireArise)
 		switch {
 			case err != nil:
 				err.AddErrorFrame(&RequireArtifactFrame {
@@ -249,6 +270,7 @@ func (artifact *FileArtifact) Require(plan *abs.Plan) (err abs.BuildError) {
 			case !exists:
 				err = &NoGeneratorError {
 					Artifact: artifact,
+					RequireArise: requireArise,
 				}
 		}
 	}
@@ -298,7 +320,11 @@ func (artifact *GroupArtifact) PathNames(sink []string) []string {
 	return sink
 }
 
-func (artifact *GroupArtifact) EarliestModTime() (result time.Time, err abs.BuildError, missing bool) {
+func (artifact *GroupArtifact) EarliestModTime(arise *abs.AriseRef) (
+	result time.Time,
+	err abs.BuildError,
+	missing bool,
+) {
 	result = time.Now()
 	var (
 		have bool
@@ -306,7 +332,7 @@ func (artifact *GroupArtifact) EarliestModTime() (result time.Time, err abs.Buil
 		chmiss bool
 	)
 	for _, child := range artifact.children {
-		chmod, err, chmiss = child.EarliestModTime()
+		chmod, err, chmiss = child.EarliestModTime(arise)
 		missing = missing || chmiss
 		if err != nil {
 			return
@@ -322,7 +348,11 @@ func (artifact *GroupArtifact) EarliestModTime() (result time.Time, err abs.Buil
 	return
 }
 
-func (artifact *GroupArtifact) LatestModTime() (result time.Time, err abs.BuildError, missing bool) {
+func (artifact *GroupArtifact) LatestModTime(arise *abs.AriseRef) (
+	result time.Time,
+	err abs.BuildError,
+	missing bool,
+) {
 	result = time.Now()
 	var (
 		have bool
@@ -330,7 +360,7 @@ func (artifact *GroupArtifact) LatestModTime() (result time.Time, err abs.BuildE
 		chmiss bool
 	)
 	for _, child := range artifact.children {
-		chmod, err, chmiss = child.LatestModTime()
+		chmod, err, chmiss = child.LatestModTime(arise)
 		missing = missing || chmiss
 		if err != nil {
 			return
@@ -359,12 +389,12 @@ func (artifact *GroupArtifact) Flatten() (err abs.BuildError) {
 	return
 }
 
-func (artifact *GroupArtifact) Require(plan *abs.Plan) (err abs.BuildError) {
+func (artifact *GroupArtifact) Require(plan *abs.Plan, requireArise *abs.AriseRef) (err abs.BuildError) {
 	if plan.AlreadyUpToDate(artifact) {
 		return
 	}
 	for _, child := range artifact.children {
-		err = child.Require(plan)
+		err = child.Require(plan, requireArise)
 		if err != nil {
 			err.AddErrorFrame(&RequireArtifactFrame {
 				Artifact: artifact,
@@ -422,14 +452,14 @@ func PlanSingleTransform(
 	plan *abs.Plan,
 	planner func() abs.BuildError,
 ) abs.BuildError {
-	smod, serr, _ := source.LatestModTime()
+	smod, serr, _ := source.LatestModTime(transform.TransformArise())
 	if serr != nil {
 		serr.AddErrorFrame(&ApplyTransformFrame {
 			Transform: transform,
 		})
 		return serr
 	}
-	dmod, derr, dmiss := destination.EarliestModTime()
+	dmod, derr, dmiss := destination.EarliestModTime(transform.TransformArise())
 	if derr != nil {
 		derr.AddErrorFrame(&ApplyTransformFrame {
 			Transform: transform,
@@ -452,7 +482,7 @@ func PlanMultiTransform(
 	plan *abs.Plan,
 	planner func() abs.BuildError,
 ) abs.BuildError {
-	dmod, derr, dmiss := destination.EarliestModTime()
+	dmod, derr, dmiss := destination.EarliestModTime(transform.TransformArise())
 	if derr != nil {
 		derr.AddErrorFrame(&ApplyTransformFrame {
 			Transform: transform,
@@ -464,7 +494,7 @@ func PlanMultiTransform(
 		if apply {
 			break
 		}
-		smod, serr, _ := source.LatestModTime()
+		smod, serr, _ := source.LatestModTime(transform.TransformArise())
 		if serr != nil {
 			serr.AddErrorFrame(&ApplyTransformFrame {
 				Transform: transform,
@@ -537,7 +567,7 @@ func (action *RequireAction) SimpleDescr() string {
 }
 
 func (action *RequireAction) Perform(plan *abs.Plan) abs.BuildError {
-	return action.Artifact.Require(plan)
+	return action.Artifact.Require(plan, action.ActionArise())
 }
 
 var _ abs.Action = &RequireAction{}
