@@ -53,3 +53,17 @@ func (location *Location) Format() (string, error) {
 		return "", err
 	}
 }
+
+var nowhere Location = Location{}
+
+func Nowhere() *Location {
+	return &nowhere
+}
+
+var commandline Location = Location {
+	File: "<command line>",
+}
+
+func CommandLine() *Location {
+	return &commandline
+}

@@ -148,6 +148,12 @@ func (parser *Parser) Next() {
 	}
 }
 
+func (parser *Parser) Drain() {
+	for parser.Token.Type != tok.T_EOF {
+		parser.Token = <-parser.lexer
+	}
+}
+
 func (parser *Parser) Error() herr.BuildError {
 	return parser.firstError
 }
@@ -279,6 +285,12 @@ func (parser *Parser) IsTransform() bool {
 }
 
 // ---------------------------------------- intrinsics ----------------------------------------
+
+func (parser *Parser) Utterance() {
+	for parser.firstError == nil && parser.Token.Type != tok.T_EOF {
+		parser.Top()
+	}
+}
 
 type ArtifactRef interface {
 	InjectArtifact(specState *spc.State, injector func(abs.Artifact))

@@ -77,6 +77,12 @@ type Plan struct {
 	knownUpToDate map[ArtifactID]bool
 }
 
+func NewPlan() *Plan {
+	return &Plan {
+		knownUpToDate: make(map[ArtifactID]bool),
+	}
+}
+
 func (plan *Plan) AddStep(step Step) {
 	plan.steps = append(plan.steps, step)
 }

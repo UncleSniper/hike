@@ -197,6 +197,22 @@ func (state *State) FlushPendingResolutions() herr.BuildError {
 	}
 }
 
+func (state *State) Compile() (err herr.BuildError) {
+	for _, artifact := range state.artifacts {
+		err = artifact.Flatten()
+		if err != nil {
+			return
+		}
+	}
+	for _, resolver := range state.pendingResolutions {
+		err = resolver()
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 type Config struct {
 	ProjectName string
 	InducedProjectName string
