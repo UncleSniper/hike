@@ -1,0 +1,26 @@
+utterance		::= toplevel
+toplevel		::= goal
+
+goal			::= 'goal' NAME (action | '{' goal_body '}')
+goal_body		::= ('label' STRING)? action+
+
+action			::= attain
+attain			::= 'attain' NAME
+require			::= 'require' artifact_ref
+
+artifact_ref	::= STRING | artifact
+artifact		::= file_artifact
+					| group_artifact
+file_artifact	::= 'file' STRING (STRING | '{' file_body '}')
+file_body		::= STRING ('name' STRING)? transform?
+group_artifact	::= 'artifacts' STRING '{' group_body '}'
+group_body		::= 'name' STRING artifact*
+
+transform		::= exec_transform
+exec_transform	::= 'exec' STRING '{' command_word+ exec_option* artifact+ '}'
+command_word	::= STRING
+					| 'source'
+					| 'dest'
+					| '{' command_word+ '}'
+exec_option		::= 'loud'
+					| 'suffixIsDestination'
