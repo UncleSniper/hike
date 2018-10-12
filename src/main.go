@@ -7,6 +7,7 @@ import _ "hike/generic"
 import _ "hike/spec"
 import _ "hike/syntax"
 import _ "hike/known"
+import _ "hike/reader"
 
 func main() {
 	//TODO
