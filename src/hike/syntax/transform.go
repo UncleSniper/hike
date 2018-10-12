@@ -1,6 +1,7 @@
 package syntax
 
 import (
+	herr "hike/error"
 	//spc "hike/spec"
 	tok "hike/token"
 	prs "hike/parser"
@@ -122,7 +123,7 @@ func ParseCommandTransform(parser *prs.Parser) *gen.MultiCommandTransform {
 	}
 	exec := gen.NewMultiCommandTransform(
 		description,
-		&abs.AriseRef {
+		&herr.AriseRef {
 			Text: "'exec' stanza",
 			Location: start,
 		},

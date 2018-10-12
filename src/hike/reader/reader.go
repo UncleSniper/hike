@@ -11,7 +11,7 @@ import (
 	*/
 )
 
-func ReadFile(path string) (err herr.Error) {
+func ReadFile(path string) (err herr.BuildError) {
 	file, nerr := os.Open(path)
 	if nerr != nil {
 		//err = 

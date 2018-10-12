@@ -1,20 +1,20 @@
 package spec
 
 import (
+	herr "hike/error"
 	abs "hike/abstract"
-	con "hike/concrete"
 	loc "hike/location"
 )
 
 type DuplicateGoalError struct {
-	con.BuildErrorBase
-	RegisterArise *abs.AriseRef
+	herr.BuildErrorBase
+	RegisterArise *herr.AriseRef
 	OldGoal *abs.Goal
 	NewGoal *abs.Goal
 }
 
 func (duplicate *DuplicateGoalError) PrintBuildError(level uint) error {
-	prn := &abs.ErrorPrinter{}
+	prn := &herr.ErrorPrinter{}
 	prn.Level(level)
 	prn.Println("Goal name clash:", duplicate.OldGoal.Name)
 	prn.Indent(1)
@@ -35,17 +35,17 @@ func (duplicate *DuplicateGoalError) BuildErrorLocation() *loc.Location {
 	return duplicate.RegisterArise.Location
 }
 
-var _ abs.BuildError = &DuplicateGoalError{}
+var _ herr.BuildError = &DuplicateGoalError{}
 
 type NoSuchGoalError struct {
-	con.BuildErrorBase
+	herr.BuildErrorBase
 	Name string
 	ReferenceLocation *loc.Location
-	ReferenceArise *abs.AriseRef
+	ReferenceArise *herr.AriseRef
 }
 
 func (no *NoSuchGoalError) PrintBuildError(level uint) error {
-	prn := &abs.ErrorPrinter{}
+	prn := &herr.ErrorPrinter{}
 	prn.Level(level)
 	prn.Println("No such goal:", no.Name)
 	prn.Indent(1)
@@ -63,17 +63,17 @@ func (no *NoSuchGoalError) BuildErrorLocation() *loc.Location {
 	return no.ReferenceLocation
 }
 
-var _ abs.BuildError = &NoSuchGoalError{}
+var _ herr.BuildError = &NoSuchGoalError{}
 
 type DuplicateArtifactError struct {
-	con.BuildErrorBase
-	RegisterArise *abs.AriseRef
+	herr.BuildErrorBase
+	RegisterArise *herr.AriseRef
 	OldArtifact abs.Artifact
 	NewArtifact abs.Artifact
 }
 
 func (duplicate *DuplicateArtifactError) PrintBuildError(level uint) error {
-	prn := &abs.ErrorPrinter{}
+	prn := &herr.ErrorPrinter{}
 	prn.Level(level)
 	prn.Println("Artifact key clash:", duplicate.OldArtifact.ArtifactKey().Unified())
 	prn.Indent(1)
@@ -94,17 +94,17 @@ func (duplicate *DuplicateArtifactError) BuildErrorLocation() *loc.Location {
 	return duplicate.RegisterArise.Location
 }
 
-var _ abs.BuildError = &DuplicateArtifactError{}
+var _ herr.BuildError = &DuplicateArtifactError{}
 
 type NoSuchArtifactError struct {
-	con.BuildErrorBase
+	herr.BuildErrorBase
 	Key *abs.ArtifactKey
 	ReferenceLocation *loc.Location
-	ReferenceArise *abs.AriseRef
+	ReferenceArise *herr.AriseRef
 }
 
 func (no *NoSuchArtifactError) PrintBuildError(level uint) error {
-	prn := &abs.ErrorPrinter{}
+	prn := &herr.ErrorPrinter{}
 	prn.Level(level)
 	prn.Println("No such artifact:", no.Key.Unified())
 	prn.Indent(1)
@@ -122,9 +122,9 @@ func (no *NoSuchArtifactError) BuildErrorLocation() *loc.Location {
 	return no.ReferenceLocation
 }
 
-var _ abs.BuildError = &NoSuchArtifactError{}
+var _ herr.BuildError = &NoSuchArtifactError{}
 
-type PendingResolver func() abs.BuildError
+type PendingResolver func() herr.BuildError
 
 type State struct {
 	Config *Config
@@ -146,7 +146,7 @@ func (state *State) Goal(name string) *abs.Goal {
 	return state.goals[name]
 }
 
-func (state *State) RegisterGoal(goal *abs.Goal, arise *abs.AriseRef) *DuplicateGoalError {
+func (state *State) RegisterGoal(goal *abs.Goal, arise *herr.AriseRef) *DuplicateGoalError {
 	old, present := state.goals[goal.Name]
 	if present {
 		return &DuplicateGoalError {
@@ -163,7 +163,7 @@ func (state *State) Artifact(key *abs.ArtifactKey) abs.Artifact {
 	return state.artifacts[key.Unified()]
 }
 
-func (state *State) RegisterArtifact(artifact abs.Artifact, arise *abs.AriseRef) *DuplicateArtifactError {
+func (state *State) RegisterArtifact(artifact abs.Artifact, arise *herr.AriseRef) *DuplicateArtifactError {
 	ks := artifact.ArtifactKey().Unified()
 	old, present := state.artifacts[ks]
 	if present {
@@ -181,7 +181,7 @@ func (state *State) SlateResolver(resolver PendingResolver) {
 	state.pendingResolutions = append(state.pendingResolutions, resolver)
 }
 
-func (state *State) FlushPendingResolutions() abs.BuildError {
+func (state *State) FlushPendingResolutions() herr.BuildError {
 	for {
 		if len(state.pendingResolutions) == 0 {
 			return nil

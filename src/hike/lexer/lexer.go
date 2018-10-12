@@ -1,15 +1,14 @@
 package lexer
 
 import (
-	"os"
 	"io"
 	"fmt"
 	"bufio"
 	"strings"
 	"strconv"
+	herr "hike/error"
 	tok "hike/token"
 	loc "hike/location"
-	herr "hike/error"
 )
 
 type State uint
@@ -36,7 +35,7 @@ type Lexer struct {
 	start uint
 	buffer strings.Builder
 	sink chan *tok.Token
-	firstError herr.Error
+	firstError herr.BuildError
 	code uint32
 	digits uint
 }
@@ -51,38 +50,80 @@ func New(file string, sink chan *tok.Token) *Lexer {
 }
 
 type LexicalError struct {
+	herr.BuildErrorBase
 	Unexpected rune
 	IsEnd bool
 	Expected string
 	Location *loc.Location
 }
 
-func (lerr *LexicalError) PrintError() error {
-	location, err := lerr.Location.Format()
-	if err != nil {
-		return err
-	}
+func (lerr *LexicalError) PrintBuildError(level uint) error {
 	var unexpected string
 	if lerr.IsEnd {
 		unexpected = "end of input"
 	} else {
 		unexpected = strconv.QuoteRune(lerr.Unexpected)
 	}
-	_, err = fmt.Fprintf(
-		os.Stderr,
-		"Lexical error near %s at %s: Expected %s\n",
-		unexpected,
-		location,
-		lerr.Expected,
-	)
-	return err
+	prn := &herr.ErrorPrinter{}
+	prn.Level(level)
+	prn.Printf("Lexical error near %s at ", unexpected)
+	prn.Location(lerr.Location)
+	prn.Printf(": Expected %s\n", lerr.Expected)
+	lerr.InjectBacktrace(prn, 0)
+	return prn.Done()
+}
+
+func (lerr *LexicalError) BuildErrorLocation() *loc.Location {
+	return lerr.Location
 }
 
 func (err *LexicalError) ErrorLocation() *loc.Location {
 	return err.Location
 }
 
-var _ herr.Error = &LexicalError{}
+var _ herr.BuildError = &LexicalError{}
+
+type StringBufferError struct {
+	herr.BuildErrorBase
+	TrueError error
+	Location *loc.Location
+}
+
+func (buferr *StringBufferError) PrintBuildError(level uint) error {
+	prn := &herr.ErrorPrinter{}
+	prn.Print("Internal error in hikefile lexer at ")
+	prn.Location(buferr.Location)
+	prn.Printf(": Failed to write to string buffer: %s", buferr.TrueError.Error())
+	buferr.InjectBacktrace(prn, level)
+	return prn.Done()
+}
+
+func (buferr *StringBufferError) BuildErrorLocation() *loc.Location {
+	return buferr.Location
+}
+
+var _ herr.BuildError = &StringBufferError{}
+
+type HikefileIOError struct {
+	herr.BuildErrorBase
+	TrueError error
+	Location *loc.Location
+}
+
+func (ioerr *HikefileIOError) PrintBuildError(level uint) error {
+	prn := &herr.ErrorPrinter{}
+	prn.Print("I/O error reading hikefile at ")
+	prn.Location(ioerr.Location)
+	prn.Printf(": %s", ioerr.TrueError.Error())
+	ioerr.InjectBacktrace(prn, level)
+	return prn.Done()
+}
+
+func (ioerr *HikefileIOError) BuildErrorLocation() *loc.Location {
+	return ioerr.Location
+}
+
+var _ herr.BuildError = &HikefileIOError{}
 
 func (lexer *Lexer) Location() *loc.Location {
 	return &loc.Location {
@@ -112,8 +153,8 @@ func (lexer *Lexer) noEnd(expected string) {
 	lexer.state = s_ERROR
 }
 
-func (lexer *Lexer) propagate(trueError error) {
-	lexer.firstError = &herr.PropagatedError {
+func (lexer *Lexer) buferr(trueError error) {
+	lexer.firstError = &StringBufferError {
 		TrueError: trueError,
 		Location: lexer.Location(),
 	}
@@ -162,7 +203,7 @@ func (lexer *Lexer) doStringHex(c rune, maxDigits uint) bool {
 	if lexer.digits >= maxDigits {
 		_, err := lexer.buffer.WriteRune(rune(lexer.code))
 		if err != nil {
-			lexer.propagate(err)
+			lexer.buferr(err)
 			return true
 		}
 		lexer.digits = 0
@@ -194,14 +235,14 @@ func (lexer *Lexer) PushRune(c rune) {
 						case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c == '_':
 							_, err = lexer.buffer.WriteRune(c)
 							if err != nil {
-								lexer.propagate(err)
+								lexer.buferr(err)
 								return
 							}
 							lexer.state = s_NAME
 						case c >= '0' && c <= '9':
 							_, err = lexer.buffer.WriteRune(c)
 							if err != nil {
-								lexer.propagate(err)
+								lexer.buferr(err)
 								return
 							}
 							lexer.state = s_INT
@@ -216,7 +257,7 @@ func (lexer *Lexer) PushRune(c rune) {
 			if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' {
 				_, err = lexer.buffer.WriteRune(c)
 				if err != nil {
-					lexer.propagate(err)
+					lexer.buferr(err)
 					return
 				}
 			} else {
@@ -228,12 +269,12 @@ func (lexer *Lexer) PushRune(c rune) {
 			if c >= '0' && c <= '9' {
 				_, err = lexer.buffer.WriteRune('-')
 				if err != nil {
-					lexer.propagate(err)
+					lexer.buferr(err)
 					return
 				}
 				_, err = lexer.buffer.WriteRune(c)
 				if err != nil {
-					lexer.propagate(err)
+					lexer.buferr(err)
 					return
 				}
 				lexer.state = s_INT
@@ -245,7 +286,7 @@ func (lexer *Lexer) PushRune(c rune) {
 			if c >= '0' && c <= '9' {
 				_, err = lexer.buffer.WriteRune(c)
 				if err != nil {
-					lexer.propagate(err)
+					lexer.buferr(err)
 					return
 				}
 			} else {
@@ -266,7 +307,7 @@ func (lexer *Lexer) PushRune(c rune) {
 				default:
 					_, err = lexer.buffer.WriteRune(c)
 					if err != nil {
-						lexer.propagate(err)
+						lexer.buferr(err)
 						return
 					}
 			}
@@ -310,7 +351,7 @@ func (lexer *Lexer) PushRune(c rune) {
 					lexer.state = s_STRING_UNICODE32
 			}
 			if err != nil {
-				lexer.propagate(err)
+				lexer.buferr(err)
 				return
 			}
 		case s_STRING_HEX:
@@ -336,7 +377,7 @@ func (lexer *Lexer) PushRune(c rune) {
 	}
 }
 
-func (lexer *Lexer) EndUnit() herr.Error {
+func (lexer *Lexer) EndUnit() herr.BuildError {
 	switch lexer.state {
 		case s_NONE, s_ERROR:
 		case s_NAME:
@@ -371,11 +412,11 @@ func (lexer *Lexer) PushString(chunk string) {
 	}
 }
 
-func (lexer *Lexer) FirstError() herr.Error {
+func (lexer *Lexer) FirstError() herr.BuildError {
 	return lexer.firstError
 }
 
-func (lexer *Lexer) Slurp(in io.Reader) herr.Error {
+func (lexer *Lexer) Slurp(in io.Reader) herr.BuildError {
 	br := bufio.NewReader(in)
 	for lexer.state != s_ERROR {
 		c, size, err := br.ReadRune()
@@ -386,7 +427,10 @@ func (lexer *Lexer) Slurp(in io.Reader) herr.Error {
 			break
 		}
 		if err != nil {
-			lexer.propagate(err)
+			lexer.firstError = &HikefileIOError {
+				TrueError: err,
+				Location: lexer.Location(),
+			}
 			break
 		}
 	}

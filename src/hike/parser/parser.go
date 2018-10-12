@@ -3,11 +3,11 @@ package parser
 import (
 	"fmt"
 	"strings"
+	herr "hike/error"
 	spc "hike/spec"
 	tok "hike/token"
 	loc "hike/location"
 	abs "hike/abstract"
-	con "hike/concrete"
 )
 
 // ---------------------------------------- BuildFrame ----------------------------------------
@@ -18,24 +18,24 @@ type ParseFrame struct {
 }
 
 func (frame *ParseFrame) PrintErrorFrame(level uint) error {
-	prn := &abs.ErrorPrinter{}
+	prn := &herr.ErrorPrinter{}
 	prn.Printf("parsing %s starting at ", frame.What)
 	prn.Location(frame.Start)
 	return prn.Done()
 }
 
-var _ abs.BuildFrame = &ParseFrame{}
+var _ herr.BuildFrame = &ParseFrame{}
 
 // ---------------------------------------- BuildError ----------------------------------------
 
 type SyntaxError struct {
-	con.BuildErrorBase
+	herr.BuildErrorBase
 	Near *tok.Token
 	Expected string
 }
 
 func (syntax *SyntaxError) PrintBuildError(level uint) error {
-	prn := &abs.ErrorPrinter{}
+	prn := &herr.ErrorPrinter{}
 	prn.Level(level)
 	prn.Print("Syntax error at ")
 	prn.Location(&syntax.Near.Location)
@@ -60,14 +60,14 @@ func (syntax *SyntaxError) BuildErrorLocation() *loc.Location {
 	return &syntax.Near.Location
 }
 
-var _ abs.BuildError = &SyntaxError{}
+var _ herr.BuildError = &SyntaxError{}
 
 // ---------------------------------------- Parser ----------------------------------------
 
 type Parser struct {
 	lexer chan *tok.Token
 	Token *tok.Token
-	firstError abs.BuildError
+	firstError herr.BuildError
 	knownStructures *KnownStructures
 	specState *spc.State
 }
@@ -148,7 +148,7 @@ func (parser *Parser) Next() {
 	}
 }
 
-func (parser *Parser) Error() abs.BuildError {
+func (parser *Parser) Error() herr.BuildError {
 	return parser.firstError
 }
 
@@ -193,7 +193,7 @@ func (parser *Parser) IsKeyword(name string) bool {
 	return parser.Token.Type == tok.T_NAME && parser.Token.Text == name
 }
 
-func (parser *Parser) Fail(fault abs.BuildError) {
+func (parser *Parser) Fail(fault herr.BuildError) {
 	if parser.firstError == nil {
 		parser.firstError = fault
 	}
@@ -297,11 +297,11 @@ var _ ArtifactRef = &PresentArtifactRef{}
 type PendingArtifactRef struct {
 	Key *abs.ArtifactKey
 	ReferenceLocation *loc.Location
-	ReferenceArise *abs.AriseRef
+	ReferenceArise *herr.AriseRef
 }
 
 func (ref *PendingArtifactRef) InjectArtifact(specState *spc.State, injector func(abs.Artifact)) {
-	specState.SlateResolver(func() abs.BuildError {
+	specState.SlateResolver(func() herr.BuildError {
 		artifact := specState.Artifact(ref.Key)
 		if artifact != nil {
 			injector(artifact)
@@ -331,7 +331,7 @@ func SplitArtifactKey(ks string, config *spc.Config) *abs.ArtifactKey {
 	return key
 }
 
-func (parser *Parser) ArtifactRef(arise *abs.AriseRef) ArtifactRef {
+func (parser *Parser) ArtifactRef(arise *herr.AriseRef) ArtifactRef {
 	switch {
 		case parser.Token.Type == tok.T_STRING:
 			specState := parser.SpecState()

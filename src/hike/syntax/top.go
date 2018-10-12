@@ -1,6 +1,7 @@
 package syntax
 
 import (
+	herr "hike/error"
 	tok "hike/token"
 	prs "hike/parser"
 	abs "hike/abstract"
@@ -18,7 +19,7 @@ func ParseGoal(parser *prs.Parser) *abs.Goal {
 	}
 	goal := &abs.Goal {
 		Name: parser.Token.Text,
-		Arise: &abs.AriseRef {
+		Arise: &herr.AriseRef {
 			Text: "'goal' stanza",
 			Location: start,
 		},

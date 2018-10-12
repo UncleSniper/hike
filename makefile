@@ -13,4 +13,4 @@ new: clean all
 
 hike: $(SRC)
 	echo building
-	cd src; GOPATH="$(shell pwd)" go build -o ../hike
+	cd src; GOPATH="$(shell pwd)" go build -o ../hike 2>&1 | sed -r 's@^hike/[a-z/]+\.go:[0-9]+@src/&@'

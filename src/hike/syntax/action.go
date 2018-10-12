@@ -1,6 +1,7 @@
 package syntax
 
 import (
+	herr "hike/error"
 	spc "hike/spec"
 	tok "hike/token"
 	prs "hike/parser"
@@ -24,13 +25,13 @@ func ParseAttainAction(parser *prs.Parser) *con.AttainAction {
 	action := &con.AttainAction {
 		Goal: specState.Goal(name),
 	}
-	action.Arise = &abs.AriseRef {
+	action.Arise = &herr.AriseRef {
 		Text: "'attain' stanza",
 		Location: start,
 	}
 	parser.Next()
 	if action.Goal == nil {
-		specState.SlateResolver(func() abs.BuildError {
+		specState.SlateResolver(func() herr.BuildError {
 			action.Goal = specState.Goal(name)
 			if action.Goal != nil {
 				return nil
@@ -61,7 +62,7 @@ func ParseRequireAction(parser *prs.Parser) *con.RequireAction {
 	}
 	start := &parser.Token.Location
 	parser.Next()
-	arise := &abs.AriseRef {
+	arise := &herr.AriseRef {
 		Text: "'require' stanza",
 		Location: start,
 	}

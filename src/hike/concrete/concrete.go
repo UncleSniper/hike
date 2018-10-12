@@ -3,6 +3,7 @@ package concrete
 import (
 	"os"
 	"time"
+	herr "hike/error"
 	loc "hike/location"
 	abs "hike/abstract"
 )
@@ -10,7 +11,7 @@ import (
 // ---------------------------------------- BuildFrame ----------------------------------------
 
 func PrintArtifactErrorFrameBase(level uint, action string, artifact abs.Artifact) error {
-	prn := &abs.ErrorPrinter{}
+	prn := &herr.ErrorPrinter{}
 	prn.Level(level)
 	prn.Printf("%s artifact\n", action)
 	prn.Indent(1)
@@ -28,7 +29,7 @@ func (frame *RequireArtifactFrame) PrintErrorFrame(level uint) error {
 	return PrintArtifactErrorFrameBase(level, "requiring", frame.Artifact)
 }
 
-var _ abs.BuildFrame = &RequireArtifactFrame{}
+var _ herr.BuildFrame = &RequireArtifactFrame{}
 
 type FlattenArtifactFrame struct {
 	Artifact abs.Artifact
@@ -38,14 +39,14 @@ func (frame *FlattenArtifactFrame) PrintErrorFrame(level uint) error {
 	return PrintArtifactErrorFrameBase(level, "flattening", frame.Artifact)
 }
 
-var _ abs.BuildFrame = &FlattenArtifactFrame{}
+var _ herr.BuildFrame = &FlattenArtifactFrame{}
 
 type ApplyTransformFrame struct {
 	Transform abs.Transform
 }
 
 func (frame *ApplyTransformFrame) PrintErrorFrame(level uint) error {
-	prn := &abs.ErrorPrinter{}
+	prn := &herr.ErrorPrinter{}
 	prn.Level(level)
 	prn.Println("applying transform")
 	prn.Indent(1)
@@ -55,27 +56,27 @@ func (frame *ApplyTransformFrame) PrintErrorFrame(level uint) error {
 	return prn.Done()
 }
 
-var _ abs.BuildFrame = &ApplyTransformFrame{}
+var _ herr.BuildFrame = &ApplyTransformFrame{}
 
 type AttainGoalFrame struct {
 	Goal *abs.Goal
 }
 
 func (frame *AttainGoalFrame) PrintErrorFrame(level uint) error {
-	prn := &abs.ErrorPrinter{}
+	prn := &herr.ErrorPrinter{}
 	prn.Printf("attaining goal '%s' ", frame.Goal.Name)
 	prn.Arise(frame.Goal.Arise, level)
 	return prn.Done()
 }
 
-var _ abs.BuildFrame = &AttainGoalFrame{}
+var _ herr.BuildFrame = &AttainGoalFrame{}
 
 type PerformActionFrame struct {
 	Action abs.Action
 }
 
 func (frame *PerformActionFrame) PrintErrorFrame(level uint) error {
-	prn := &abs.ErrorPrinter{}
+	prn := &herr.ErrorPrinter{}
 	prn.Printf("performing action '%s' ", frame.Action.SimpleDescr())
 	prn.Arise(frame.Action.ActionArise(), level)
 	return prn.Done()
@@ -83,40 +84,14 @@ func (frame *PerformActionFrame) PrintErrorFrame(level uint) error {
 
 // ---------------------------------------- BuildError ----------------------------------------
 
-type BuildErrorBase struct {
-	frames []abs.BuildFrame
-}
-
-func (err *BuildErrorBase) AddErrorFrame(frame abs.BuildFrame) {
-	err.frames = append(err.frames, frame)
-}
-
-func (base *BuildErrorBase) PrintBacktrace(level uint) error {
-	count := len(base.frames)
-	prn := &abs.ErrorPrinter{}
-	prn.Level(level)
-	for i := 0; i < count; i++ {
-		prn.Println()
-		prn.Indent(0)
-		prn.Frame(base.frames[i], 1)
-	}
-	return prn.Done()
-}
-
-func (base *BuildErrorBase) InjectBacktrace(printer *abs.ErrorPrinter, level uint) {
-	printer.Inject(func(innerLevel uint) error {
-		return base.PrintBacktrace(innerLevel)
-	}, level)
-}
-
 type NoGeneratorError struct {
-	BuildErrorBase
+	herr.BuildErrorBase
 	Artifact abs.Artifact
-	RequireArise *abs.AriseRef
+	RequireArise *herr.AriseRef
 }
 
 func (nogen *NoGeneratorError) PrintBuildError(level uint) error {
-	prn := &abs.ErrorPrinter{}
+	prn := &herr.ErrorPrinter{}
 	prn.Level(level)
 	prn.Println("Don't know how to obtain artifact")
 	prn.Indent(1)
@@ -135,17 +110,17 @@ func (nogen *NoGeneratorError) BuildErrorLocation() *loc.Location {
 	return nogen.RequireArise.Location
 }
 
-var _ abs.BuildError = &NoGeneratorError{}
+var _ herr.BuildError = &NoGeneratorError{}
 
 type CannotStatError struct {
-	BuildErrorBase
+	herr.BuildErrorBase
 	Path string
 	OSError error
-	OperationArise *abs.AriseRef
+	OperationArise *herr.AriseRef
 }
 
 func (cannot *CannotStatError) PrintBuildError(level uint) error {
-	prn := &abs.ErrorPrinter{}
+	prn := &herr.ErrorPrinter{}
 	prn.Level(level)
 	prn.Println("Failed to stat file")
 	prn.Indent(1)
@@ -164,7 +139,7 @@ func (cannot *CannotStatError) BuildErrorLocation() *loc.Location {
 	return cannot.OperationArise.Location
 }
 
-var _ abs.BuildError = &CannotStatError{}
+var _ herr.BuildError = &CannotStatError{}
 
 // ---------------------------------------- Artifact ----------------------------------------
 
@@ -172,7 +147,7 @@ type ArtifactBase struct {
 	Key abs.ArtifactKey
 	ID abs.ArtifactID
 	Name string
-	Arise *abs.AriseRef
+	Arise *herr.AriseRef
 }
 
 func (artifact *ArtifactBase) ArtifactKey() *abs.ArtifactKey {
@@ -183,7 +158,7 @@ func (artifact *ArtifactBase) ArtifactID() abs.ArtifactID {
 	return artifact.ID
 }
 
-func (artifact *ArtifactBase) ArtifactArise() *abs.AriseRef {
+func (artifact *ArtifactBase) ArtifactArise() *herr.AriseRef {
 	return artifact.Arise
 }
 
@@ -205,7 +180,7 @@ func (artifact *FileArtifact) PathNames(sink []string) []string {
 	return append(sink, artifact.Path)
 }
 
-func (artifact *FileArtifact) ModTime(arise *abs.AriseRef) (stamp time.Time, err abs.BuildError, missing bool) {
+func (artifact *FileArtifact) ModTime(arise *herr.AriseRef) (stamp time.Time, err herr.BuildError, missing bool) {
 	info, oserr := os.Stat(artifact.Path)
 	if oserr == nil {
 		stamp = info.ModTime()
@@ -222,19 +197,19 @@ func (artifact *FileArtifact) ModTime(arise *abs.AriseRef) (stamp time.Time, err
 	return
 }
 
-func (artifact *FileArtifact) EarliestModTime(arise *abs.AriseRef) (time.Time, abs.BuildError, bool) {
+func (artifact *FileArtifact) EarliestModTime(arise *herr.AriseRef) (time.Time, herr.BuildError, bool) {
 	return artifact.ModTime(arise)
 }
 
-func (artifact *FileArtifact) LatestModTime(arise *abs.AriseRef) (time.Time, abs.BuildError, bool) {
+func (artifact *FileArtifact) LatestModTime(arise *herr.AriseRef) (time.Time, herr.BuildError, bool) {
 	return artifact.ModTime(arise)
 }
 
-func (artifact *FileArtifact) Flatten() abs.BuildError {
+func (artifact *FileArtifact) Flatten() herr.BuildError {
 	return nil
 }
 
-func FileExists(path string, arise *abs.AriseRef) (exists bool, err abs.BuildError) {
+func FileExists(path string, arise *herr.AriseRef) (exists bool, err herr.BuildError) {
 	_, oserr := os.Lstat(path)
 	switch {
 		case oserr == nil:
@@ -249,7 +224,7 @@ func FileExists(path string, arise *abs.AriseRef) (exists bool, err abs.BuildErr
 	return
 }
 
-func (artifact *FileArtifact) Require(plan *abs.Plan, requireArise *abs.AriseRef) (err abs.BuildError) {
+func (artifact *FileArtifact) Require(plan *abs.Plan, requireArise *herr.AriseRef) (err herr.BuildError) {
 	if plan.AlreadyUpToDate(artifact) {
 		return
 	}
@@ -285,7 +260,7 @@ var _ abs.Artifact = &FileArtifact{}
 func NewFile(
 	key abs.ArtifactKey,
 	name string,
-	arise *abs.AriseRef,
+	arise *herr.AriseRef,
 	path string,
 	generatingTransform abs.Transform,
 ) *FileArtifact {
@@ -320,9 +295,9 @@ func (artifact *GroupArtifact) PathNames(sink []string) []string {
 	return sink
 }
 
-func (artifact *GroupArtifact) EarliestModTime(arise *abs.AriseRef) (
+func (artifact *GroupArtifact) EarliestModTime(arise *herr.AriseRef) (
 	result time.Time,
-	err abs.BuildError,
+	err herr.BuildError,
 	missing bool,
 ) {
 	result = time.Now()
@@ -348,9 +323,9 @@ func (artifact *GroupArtifact) EarliestModTime(arise *abs.AriseRef) (
 	return
 }
 
-func (artifact *GroupArtifact) LatestModTime(arise *abs.AriseRef) (
+func (artifact *GroupArtifact) LatestModTime(arise *herr.AriseRef) (
 	result time.Time,
-	err abs.BuildError,
+	err herr.BuildError,
 	missing bool,
 ) {
 	result = time.Now()
@@ -376,7 +351,7 @@ func (artifact *GroupArtifact) LatestModTime(arise *abs.AriseRef) (
 	return
 }
 
-func (artifact *GroupArtifact) Flatten() (err abs.BuildError) {
+func (artifact *GroupArtifact) Flatten() (err herr.BuildError) {
 	for _, child := range artifact.children {
 		err = child.Flatten()
 		if err != nil {
@@ -389,7 +364,7 @@ func (artifact *GroupArtifact) Flatten() (err abs.BuildError) {
 	return
 }
 
-func (artifact *GroupArtifact) Require(plan *abs.Plan, requireArise *abs.AriseRef) (err abs.BuildError) {
+func (artifact *GroupArtifact) Require(plan *abs.Plan, requireArise *herr.AriseRef) (err herr.BuildError) {
 	if plan.AlreadyUpToDate(artifact) {
 		return
 	}
@@ -411,7 +386,7 @@ var _ abs.Artifact = &GroupArtifact{}
 func NewGroup (
 	key abs.ArtifactKey,
 	name string,
-	arise *abs.AriseRef,
+	arise *herr.AriseRef,
 ) *GroupArtifact {
 	artifact := &GroupArtifact {}
 	artifact.Key = key
@@ -435,14 +410,14 @@ func (step *StepBase) SimpleDescr() string {
 
 type TransformBase struct {
 	Description string
-	Arise *abs.AriseRef
+	Arise *herr.AriseRef
 }
 
 func (base *TransformBase) TransformDescr() string {
 	return base.Description
 }
 
-func (base *TransformBase) TransformArise() *abs.AriseRef {
+func (base *TransformBase) TransformArise() *herr.AriseRef {
 	return base.Arise
 }
 
@@ -450,8 +425,8 @@ func PlanSingleTransform(
 	transform abs.Transform,
 	source, destination abs.Artifact,
 	plan *abs.Plan,
-	planner func() abs.BuildError,
-) abs.BuildError {
+	planner func() herr.BuildError,
+) herr.BuildError {
 	smod, serr, _ := source.LatestModTime(transform.TransformArise())
 	if serr != nil {
 		serr.AddErrorFrame(&ApplyTransformFrame {
@@ -480,8 +455,8 @@ func PlanMultiTransform(
 	sources []abs.Artifact,
 	destination abs.Artifact,
 	plan *abs.Plan,
-	planner func() abs.BuildError,
-) abs.BuildError {
+	planner func() herr.BuildError,
+) herr.BuildError {
 	dmod, derr, dmiss := destination.EarliestModTime(transform.TransformArise())
 	if derr != nil {
 		derr.AddErrorFrame(&ApplyTransformFrame {
@@ -535,10 +510,10 @@ func (base *MultiTransformBase) SourceCount() int {
 // ---------------------------------------- Action ----------------------------------------
 
 type ActionBase struct {
-	Arise *abs.AriseRef
+	Arise *herr.AriseRef
 }
 
-func (base *ActionBase) ActionArise() *abs.AriseRef {
+func (base *ActionBase) ActionArise() *herr.AriseRef {
 	return base.Arise
 }
 
@@ -551,7 +526,7 @@ func (action *AttainAction) SimpleDescr() string {
 	return "attain " + action.Goal.Name
 }
 
-func (action *AttainAction) Perform(plan *abs.Plan) abs.BuildError {
+func (action *AttainAction) Perform(plan *abs.Plan) herr.BuildError {
 	return Attain(action.Goal, plan)
 }
 
@@ -566,7 +541,7 @@ func (action *RequireAction) SimpleDescr() string {
 	return "require " + action.Artifact.DisplayName()
 }
 
-func (action *RequireAction) Perform(plan *abs.Plan) abs.BuildError {
+func (action *RequireAction) Perform(plan *abs.Plan) herr.BuildError {
 	return action.Artifact.Require(plan, action.ActionArise())
 }
 
@@ -574,7 +549,7 @@ var _ abs.Action = &RequireAction{}
 
 // ---------------------------------------- Goal ----------------------------------------
 
-func Attain(goal *abs.Goal, plan *abs.Plan) (err abs.BuildError) {
+func Attain(goal *abs.Goal, plan *abs.Plan) (err herr.BuildError) {
 	for _, action := range goal.Actions() {
 		err = action.Perform(plan)
 		if err != nil {

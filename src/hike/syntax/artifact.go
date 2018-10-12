@@ -2,6 +2,7 @@ package syntax
 
 import (
 	"path/filepath"
+	herr "hike/error"
 	spc "hike/spec"
 	tok "hike/token"
 	prs "hike/parser"
@@ -31,7 +32,7 @@ func ParseFileArtifact(parser *prs.Parser) *con.FileArtifact {
 	config := parser.SpecState().Config
 	key := prs.SplitArtifactKey(parser.Token.Text, config)
 	parser.Next()
-	arise := &abs.AriseRef {
+	arise := &herr.AriseRef {
 		Text: "'file' stanza",
 		Location: start,
 	}
@@ -133,7 +134,7 @@ func ParseGroupArtifact(parser *prs.Parser) *con.GroupArtifact {
 	}
 	name := parser.Token.Text
 	parser.Next()
-	arise := &abs.AriseRef {
+	arise := &herr.AriseRef {
 		Text: "'artifacts' stanza",
 		Location: start,
 	}
