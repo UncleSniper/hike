@@ -106,7 +106,6 @@ func ParseCommandTransform(parser *prs.Parser) *gen.MultiCommandTransform {
 		parser.Frame("command transform", start)
 		return nil
 	}
-	//haveExecOptions := false
 	loud := false
 	suffixIsDestination := false
 	for IsExecOption(parser) {
@@ -120,12 +119,12 @@ func ParseCommandTransform(parser *prs.Parser) *gen.MultiCommandTransform {
 			default:
 				panic("Unrecognized exec option: " + parser.Token.Text)
 		}
-		//haveExecOptions = true
 	}
 	exec := gen.NewMultiCommandTransform(
 		description,
 		&abs.AriseRef {
-			//TODO
+			Text: "'exec' stanza",
+			Location: start,
 		},
 		func(sources []string, destinations []string) [][]string {
 			return [][]string{
@@ -135,7 +134,25 @@ func ParseCommandTransform(parser *prs.Parser) *gen.MultiCommandTransform {
 		loud,
 		suffixIsDestination,
 	)
-	//TODO
+	for parser.IsArtifact() {
+		source := parser.Artifact()
+		if source == nil {
+			parser.Frame("command transform", start)
+			return nil
+		}
+		exec.AddSource(source)
+	}
+	if exec.SourceCount() == 0 {
+		parser.Die("command transform option or artifact")
+		parser.Frame("command transform", start)
+		return nil
+	}
+	if parser.Token.Type != tok.T_RBRACE {
+		parser.Die("artifact or '}'")
+		parser.Frame("command transform", start)
+		return nil
+	}
+	parser.Next()
 	return exec
 }
 

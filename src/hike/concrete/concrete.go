@@ -498,6 +498,10 @@ func (base *MultiTransformBase) AddSource(source abs.Artifact) {
 	base.Sources = append(base.Sources, source)
 }
 
+func (base *MultiTransformBase) SourceCount() int {
+	return len(base.Sources)
+}
+
 // ---------------------------------------- Action ----------------------------------------
 
 type ActionBase struct {
