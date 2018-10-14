@@ -15,6 +15,7 @@ import (
 
 import _ "hike/concrete"
 import _ "hike/generic"
+import _ "hike/hilevel"
 
 const DEFAULT_HIKEFILE = "hikefile"
 const DEFAULT_GOAL = "build"
