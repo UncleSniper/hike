@@ -2,13 +2,15 @@ package hilevel
 
 import (
 	herr "hike/error"
+	spc "hike/spec"
 	abs "hike/abstract"
 )
 
 type TransformFactory interface {
-	NewTransform(arise *herr.AriseRef, sources []abs.Artifact)
+	NewTransform(sources []abs.Artifact, state *spc.State) (abs.Transform, herr.BuildError)
 }
 
 type ArtifactFactory interface {
-	NewArtifact(arise *herr.AriseRef, oldArtifact abs.Artifact)
+	NewArtifact(oldArtifacts []abs.Artifact, state *spc.State) (abs.Artifact, herr.BuildError)
+	RequiresMerge() bool
 }

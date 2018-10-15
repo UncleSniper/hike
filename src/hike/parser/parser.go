@@ -6,6 +6,7 @@ import (
 	herr "hike/error"
 	spc "hike/spec"
 	tok "hike/token"
+	hil "hike/hilevel"
 	loc "hike/location"
 	abs "hike/abstract"
 )
@@ -76,12 +77,16 @@ type TopParser func(parser *Parser)
 type ActionParser func(parser *Parser) abs.Action
 type ArtifactParser func(parser *Parser) abs.Artifact
 type TransformParser func(parser *Parser) abs.Transform
+type TransformFactoryParser func(parser *Parser) hil.TransformFactory
+type ArtifactFactoryParser func(parser *Parser) hil.ArtifactFactory
 
 type KnownStructures struct {
 	top map[string]TopParser
 	action map[string]ActionParser
 	artifact map[string]ArtifactParser
 	transform map[string]TransformParser
+	transformFactory map[string]TransformFactoryParser
+	artifactFactory map[string]ArtifactFactoryParser
 }
 
 func NewKnownStructures() *KnownStructures {
@@ -90,6 +95,8 @@ func NewKnownStructures() *KnownStructures {
 		action: make(map[string]ActionParser),
 		artifact: make(map[string]ArtifactParser),
 		transform: make(map[string]TransformParser),
+		transformFactory: make(map[string]TransformFactoryParser),
+		artifactFactory: make(map[string]ArtifactFactoryParser),
 	}
 }
 
@@ -123,6 +130,22 @@ func (known *KnownStructures) RegisterTransformParser(initiator string, parser T
 
 func (known *KnownStructures) TransformParser(initiator string) TransformParser {
 	return known.transform[initiator]
+}
+
+func (known *KnownStructures) RegisterTransformFactoryParser(initiator string, parser TransformFactoryParser) {
+	known.transformFactory[initiator] = parser
+}
+
+func (known *KnownStructures) TransformFactoryParser(initiator string) TransformFactoryParser {
+	return known.transformFactory[initiator]
+}
+
+func (known *KnownStructures) RegisterArtifactFactoryParser(initiator string, parser ArtifactFactoryParser) {
+	known.artifactFactory[initiator] = parser
+}
+
+func (known *KnownStructures) ArtifactFactoryParser(initiator string) ArtifactFactoryParser {
+	return known.artifactFactory[initiator]
 }
 
 func New(
@@ -284,6 +307,40 @@ func (parser *Parser) IsTransform() bool {
 	return parser.Token.Type == tok.T_NAME && parser.knownStructures.TransformParser(parser.Token.Text) != nil
 }
 
+func (parser *Parser) TransformFactory() hil.TransformFactory {
+	if !parser.Expect(tok.T_NAME) {
+		return nil
+	}
+	cb := parser.knownStructures.TransformFactoryParser(parser.Token.Text)
+	if cb == nil {
+		parser.Die("transform factory")
+		return nil
+	} else {
+		return cb(parser)
+	}
+}
+
+func (parser *Parser) IsTransformFactory() bool {
+	return parser.Token.Type == tok.T_NAME && parser.knownStructures.TransformFactoryParser(parser.Token.Text) != nil
+}
+
+func (parser *Parser) ArtifactFactory() hil.ArtifactFactory {
+	if !parser.Expect(tok.T_NAME) {
+		return nil
+	}
+	cb := parser.knownStructures.ArtifactFactoryParser(parser.Token.Text)
+	if cb == nil {
+		parser.Die("artifact factory")
+		return nil
+	} else {
+		return cb(parser)
+	}
+}
+
+func (parser *Parser) IsArtifactFactory() bool {
+	return parser.Token.Type == tok.T_NAME && parser.knownStructures.ArtifactFactoryParser(parser.Token.Text) != nil
+}
+
 // ---------------------------------------- intrinsics ----------------------------------------
 
 func (parser *Parser) Utterance() {
@@ -374,4 +431,8 @@ func (parser *Parser) ArtifactRef(arise *herr.AriseRef) ArtifactRef {
 			parser.Die("string (artifact key) or artifact")
 			return nil
 	}
+}
+
+func (parser *Parser) IsArtifactRef() bool {
+	return parser.Token.Type == tok.T_STRING || parser.IsArtifact()
 }
