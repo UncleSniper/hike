@@ -136,11 +136,11 @@ func ParseCommandTransform(parser *prs.Parser) *gen.MultiCommandTransform {
 		suffixIsDestination,
 	)
 	specState := parser.SpecState()
-	for parser.IsArtifactRef() {
+	for parser.IsArtifactRef(true) {
 		source := parser.ArtifactRef(&herr.AriseRef {
 			Text: "command transform source",
 			Location: &parser.Token.Location,
-		})
+		}, true)
 		if source == nil {
 			parser.Frame("command transform", start)
 			return nil

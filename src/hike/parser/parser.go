@@ -79,6 +79,7 @@ type ArtifactParser func(parser *Parser) abs.Artifact
 type TransformParser func(parser *Parser) abs.Transform
 type TransformFactoryParser func(parser *Parser) hil.TransformFactory
 type ArtifactFactoryParser func(parser *Parser) hil.ArtifactFactory
+type ArtifactSetParser func(parser *Parser) []abs.Artifact
 
 type KnownStructures struct {
 	top map[string]TopParser
@@ -87,6 +88,7 @@ type KnownStructures struct {
 	transform map[string]TransformParser
 	transformFactory map[string]TransformFactoryParser
 	artifactFactory map[string]ArtifactFactoryParser
+	artifactSet map[string]ArtifactSetParser
 }
 
 func NewKnownStructures() *KnownStructures {
@@ -97,6 +99,7 @@ func NewKnownStructures() *KnownStructures {
 		transform: make(map[string]TransformParser),
 		transformFactory: make(map[string]TransformFactoryParser),
 		artifactFactory: make(map[string]ArtifactFactoryParser),
+		artifactSet: make(map[string]ArtifactSetParser),
 	}
 }
 
@@ -146,6 +149,14 @@ func (known *KnownStructures) RegisterArtifactFactoryParser(initiator string, pa
 
 func (known *KnownStructures) ArtifactFactoryParser(initiator string) ArtifactFactoryParser {
 	return known.artifactFactory[initiator]
+}
+
+func (known *KnownStructures) RegisterArtifactSetParser(initiator string, parser ArtifactSetParser) {
+	known.artifactSet[initiator] = parser
+}
+
+func (known *KnownStructures) ArtifactSetParser(initiator string) ArtifactSetParser {
+	return known.artifactSet[initiator]
 }
 
 func New(
@@ -341,6 +352,40 @@ func (parser *Parser) IsArtifactFactory() bool {
 	return parser.Token.Type == tok.T_NAME && parser.knownStructures.ArtifactFactoryParser(parser.Token.Text) != nil
 }
 
+func (parser *Parser) ArtifactSet() []abs.Artifact {
+	if !parser.Expect(tok.T_NAME) {
+		return nil
+	}
+	single := parser.knownStructures.ArtifactParser(parser.Token.Text)
+	if single != nil {
+		artifact := single(parser)
+		if artifact == nil {
+			return nil
+		}
+		return []abs.Artifact{artifact}
+	}
+	multi := parser.knownStructures.ArtifactSetParser(parser.Token.Text)
+	if multi == nil {
+		parser.Die("artifact set")
+		return nil
+	} else {
+		return multi(parser)
+	}
+}
+
+func (parser *Parser) IsArtifactSet() bool {
+	switch {
+		case parser.Token.Type != tok.T_NAME:
+			return false
+		case parser.knownStructures.ArtifactParser(parser.Token.Text) != nil:
+			return true
+		case parser.knownStructures.ArtifactSetParser(parser.Token.Text) != nil:
+			return true
+		default:
+			return false
+	}
+}
+
 // ---------------------------------------- intrinsics ----------------------------------------
 
 func (parser *Parser) Utterance() {
@@ -400,9 +445,28 @@ func SplitArtifactKey(ks string, config *spc.Config) *abs.ArtifactKey {
 	return key
 }
 
-func (parser *Parser) ArtifactRef(arise *herr.AriseRef) ArtifactRef {
+func (parser *Parser) artifactRefHead(extended bool) bool {
+	if extended {
+		if parser.Token.Type != tok.T_NAME || parser.Token.Text != "artifact" {
+			return false
+		}
+		start := &parser.Token.Location
+		parser.Next()
+		if !parser.ExpectExp(tok.T_STRING, "referenced artifact key") {
+			parser.Frame("artifact reference", start)
+		}
+		return true
+	} else {
+		return parser.Token.Type == tok.T_STRING
+	}
+}
+
+func (parser *Parser) ArtifactRef(arise *herr.AriseRef, extended bool) ArtifactRef {
 	switch {
-		case parser.Token.Type == tok.T_STRING:
+		case parser.artifactRefHead(extended):
+			if parser.IsError() {
+				return nil
+			}
 			specState := parser.SpecState()
 			key := SplitArtifactKey(parser.Token.Text, specState.Config)
 			refLocation := &parser.Token.Location
@@ -433,6 +497,13 @@ func (parser *Parser) ArtifactRef(arise *herr.AriseRef) ArtifactRef {
 	}
 }
 
-func (parser *Parser) IsArtifactRef() bool {
-	return parser.Token.Type == tok.T_STRING || parser.IsArtifact()
+func (parser *Parser) IsArtifactRef(extended bool) bool {
+	if parser.IsArtifact() {
+		return true
+	}
+	if extended {
+		return parser.IsKeyword("artifact")
+	} else {
+		return parser.Token.Type == tok.T_STRING
+	}
 }

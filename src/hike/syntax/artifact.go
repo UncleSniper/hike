@@ -176,11 +176,11 @@ func ParseGroupArtifact(parser *prs.Parser) *con.GroupArtifact {
 			case parser.Token.Type == tok.T_RBRACE:
 				parser.Next()
 				return group
-			case parser.IsArtifactRef():
+			case parser.IsArtifactRef(false):
 				artifact := parser.ArtifactRef(&herr.AriseRef {
 					Text: "group artifact child",
 					Location: &parser.Token.Location,
-				})
+				}, false)
 				if artifact == nil {
 					return nil
 				}

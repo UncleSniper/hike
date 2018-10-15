@@ -66,7 +66,7 @@ func ParseRequireAction(parser *prs.Parser) *con.RequireAction {
 		Text: "'require' stanza",
 		Location: start,
 	}
-	ref := parser.ArtifactRef(arise)
+	ref := parser.ArtifactRef(arise, false)
 	if ref == nil {
 		parser.Frame("require action", start)
 		return nil

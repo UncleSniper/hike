@@ -3,7 +3,7 @@ package hilvlimpl
 import (
 	"regexp"
 	herr "hike/error"
-	hil "hike/hilevel"
+	spc "hike/spec"
 	gen "hike/generic"
 	hlv "hike/hilevel"
 	abs "hike/abstract"
@@ -22,7 +22,10 @@ type CommandTransformFactory struct {
 	gen.CommandTransformBase
 }
 
-func (factory *CommandTransformFactory) NewTransform(sources []abs.Artifact) (abs.Transform, herr.BuildError) {
+func (factory *CommandTransformFactory) NewTransform(
+	sources []abs.Artifact,
+	state *spc.State,
+) (abs.Transform, herr.BuildError) {
 	command := gen.NewMultiCommandTransform(
 		factory.Description,
 		factory.Arise,
@@ -57,6 +60,25 @@ type StaticFileFactory struct {
 	Key string
 }
 
+func NewStaticFileFactory(
+	path string,
+	name string,
+	key string,
+	baseDir string,
+	generatingTransform hlv.TransformFactory,
+	arise *herr.AriseRef,
+) *StaticFileFactory {
+	factory := &StaticFileFactory {
+		Path: path,
+		Name: name,
+		Key: key,
+	}
+	factory.BaseDir = baseDir
+	factory.GeneratingTransform = generatingTransform
+	factory.Arise = arise
+	return factory
+}
+
 func (factory *StaticFileFactory) NewArtifact(
 	oldArtifacts []abs.Artifact,
 	state *spc.State,
@@ -68,10 +90,10 @@ func (factory *StaticFileFactory) NewArtifact(
 		case len(factory.BaseDir) > 0:
 			kname = con.GuessFileArtifactName(factory.Path, factory.BaseDir)
 		default:
-			kname = con.GuessFileArtifactName(factory.Path, state.TopDir)
+			kname = con.GuessFileArtifactName(factory.Path, state.Config.TopDir)
 	}
 	key := abs.ArtifactKey {
-		Project: state.ProjectName,
+		Project: state.Config.ProjectName,
 		Artifact: kname,
 	}
 	var uiname string
@@ -81,7 +103,7 @@ func (factory *StaticFileFactory) NewArtifact(
 		case len(factory.BaseDir) > 0:
 			uiname = con.GuessFileArtifactName(factory.Path, factory.BaseDir)
 		default:
-			uiname = con.GuessFileArtifactName(factory.Path, state.TopDir)
+			uiname = con.GuessFileArtifactName(factory.Path, state.Config.TopDir)
 	}
 	var generatingTransform abs.Transform
 	if factory.GeneratingTransform != nil {
@@ -90,7 +112,7 @@ func (factory *StaticFileFactory) NewArtifact(
 			return
 		}
 	}
-	file = con.NewFile(key, uiname, factory.Arise, path, generatingTransform)
+	file = con.NewFile(key, uiname, factory.Arise, factory.Path, generatingTransform)
 	err = state.RegisterArtifact(file, factory.Arise)
 	if err != nil {
 		file = nil
@@ -135,10 +157,10 @@ func (factory *RegexFileFactory) NewArtifact(
 			if len(factory.BaseDir) > 0 {
 				kname = con.GuessFileArtifactName(newPath, factory.BaseDir)
 			} else {
-				kname = con.GuessFileArtifactName(newPath, state.TopDir)
+				kname = con.GuessFileArtifactName(newPath, state.Config.TopDir)
 			}
 			key := abs.ArtifactKey {
-				Project: state.ProjectName,
+				Project: state.Config.ProjectName,
 				Artifact: kname,
 			}
 			file := con.NewFile(key, kname, factory.Arise, newPath, generatingTransform)
@@ -158,10 +180,10 @@ func (factory *RegexFileFactory) NewArtifact(
 			case len(factory.BaseDir) > 0:
 				kname = con.GuessGroupArtifactName(allPaths, factory.BaseDir)
 			default:
-				kname = con.GuessGroupArtifactName(allPaths, state.TopDir)
+				kname = con.GuessGroupArtifactName(allPaths, state.Config.TopDir)
 		}
 		key := abs.ArtifactKey {
-			Project: state.ProjectName,
+			Project: state.Config.ProjectName,
 			Artifact: kname,
 		}
 		switch {
@@ -170,7 +192,7 @@ func (factory *RegexFileFactory) NewArtifact(
 			case len(factory.BaseDir) > 0:
 				uiname = con.GuessGroupArtifactName(allPaths, factory.BaseDir)
 			default:
-				uiname = con.GuessGroupArtifactName(allPaths, state.TopDir)
+				uiname = con.GuessGroupArtifactName(allPaths, state.Config.TopDir)
 		}
 		group := con.NewGroup(key, uiname, factory.Arise)
 		for _, child := range files {
