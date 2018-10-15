@@ -39,7 +39,7 @@ static_file_bdy	::= STRING static_file_opt* transform_fact?
 static_file_opt	::= 'key' STRING
 					| 'name' STRING
 					| 'base' STRING
-regex_file		::= 'regex'(STRING STRING | '{' regex_file_bdy '}')
+regex_file		::= 'regex' (STRING STRING | '{' regex_file_bdy '}')
 regex_file_bdy	::= STRING STRING regex_file_opt* transform_fact?
 regex_file_opt	::= 'key' STRING
 					| 'name' STRING
