@@ -5,24 +5,25 @@ import (
 	tok "hike/token"
 	prs "hike/parser"
 	gen "hike/generic"
-	abs "hike/abstract"
+	hlv "hike/hilevel"
+	hlm "hike/hilvlimpl"
 	csx "hike/comsyntax"
 )
 
-func ParseCommandTransform(parser *prs.Parser) *gen.MultiCommandTransform {
+func ParseCommandTransformFactory(parser *prs.Parser) *hlm.CommandTransformFactory {
 	if !parser.ExpectKeyword("exec") {
 		return nil
 	}
 	start := &parser.Token.Location
 	parser.Next()
 	if !parser.ExpectExp(tok.T_STRING, "transform description") {
-		parser.Frame("command transform", start)
+		parser.Frame("command transform factory", start)
 		return nil
 	}
 	description := parser.Token.Text
 	parser.Next()
 	if !parser.Expect(tok.T_LBRACE) {
-		parser.Frame("command transform", start)
+		parser.Frame("command transform factory", start)
 		return nil
 	}
 	parser.Next()
@@ -30,14 +31,14 @@ func ParseCommandTransform(parser *prs.Parser) *gen.MultiCommandTransform {
 	for csx.IsCommandWord(parser) {
 		word := csx.ParseCommandWord(parser)
 		if word == nil {
-			parser.Frame("command transform", start)
+			parser.Frame("command transform factory", start)
 			return nil
 		}
 		words = append(words, word)
 	}
 	if len(words) == 0 {
 		parser.Die("command word")
-		parser.Frame("command transform", start)
+		parser.Frame("command transform factory", start)
 		return nil
 	}
 	loud := false
@@ -54,7 +55,7 @@ func ParseCommandTransform(parser *prs.Parser) *gen.MultiCommandTransform {
 				panic("Unrecognized exec option: " + parser.Token.Text)
 		}
 	}
-	exec := gen.NewMultiCommandTransform(
+	exec := hlm.NewCommandTransformFactory(
 		description,
 		&herr.AriseRef {
 			Text: "'exec' stanza",
@@ -68,33 +69,19 @@ func ParseCommandTransform(parser *prs.Parser) *gen.MultiCommandTransform {
 		loud,
 		suffixIsDestination,
 	)
-	specState := parser.SpecState()
-	for parser.IsArtifactRef(true) {
-		source := parser.ArtifactRef(&herr.AriseRef {
-			Text: "command transform source",
-			Location: &parser.Token.Location,
-		}, true)
-		if source == nil {
-			parser.Frame("command transform", start)
-			return nil
-		}
-		source.InjectArtifact(specState, func(artifact abs.Artifact) {
-			exec.AddSource(artifact)
-		})
-	}
 	if parser.Token.Type != tok.T_RBRACE {
-		parser.Die("artifact reference or '}'")
-		parser.Frame("command transform", start)
+		parser.Die("command option or '}'")
+		parser.Frame("command transform factory", start)
 		return nil
 	}
 	parser.Next()
 	return exec
 }
 
-func TopCommandTransform(parser *prs.Parser) abs.Transform {
-	transform := ParseCommandTransform(parser)
-	if transform != nil {
-		return transform
+func TopCommandTransformFactory(parser *prs.Parser) hlv.TransformFactory {
+	factory := ParseCommandTransformFactory(parser)
+	if factory != nil {
+		return factory
 	} else {
 		return nil
 	}

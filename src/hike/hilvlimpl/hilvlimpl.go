@@ -22,6 +22,22 @@ type CommandTransformFactory struct {
 	gen.CommandTransformBase
 }
 
+func NewCommandTransformFactory(
+	description string,
+	arise *herr.AriseRef,
+	commandLine gen.VariableCommandLine,
+	loud bool,
+	suffixIsDestination bool,
+) *CommandTransformFactory {
+	factory := &CommandTransformFactory {}
+	factory.Description = description
+	factory.Arise = arise
+	factory.CommandLine = commandLine
+	factory.Loud = loud
+	factory.SuffixIsDestination = suffixIsDestination
+	return factory
+}
+
 func (factory *CommandTransformFactory) NewTransform(
 	sources []abs.Artifact,
 	state *spc.State,
