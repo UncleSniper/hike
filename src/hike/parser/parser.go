@@ -6,7 +6,7 @@ import (
 	herr "hike/error"
 	spc "hike/spec"
 	tok "hike/token"
-	hil "hike/hilevel"
+	hlv "hike/hilevel"
 	loc "hike/location"
 	abs "hike/abstract"
 )
@@ -77,8 +77,8 @@ type TopParser func(parser *Parser)
 type ActionParser func(parser *Parser) abs.Action
 type ArtifactParser func(parser *Parser) abs.Artifact
 type TransformParser func(parser *Parser) abs.Transform
-type TransformFactoryParser func(parser *Parser) hil.TransformFactory
-type ArtifactFactoryParser func(parser *Parser) hil.ArtifactFactory
+type TransformFactoryParser func(parser *Parser) hlv.TransformFactory
+type ArtifactFactoryParser func(parser *Parser) hlv.ArtifactFactory
 type ArtifactSetParser func(parser *Parser) []abs.Artifact
 
 type KnownStructures struct {
@@ -318,7 +318,7 @@ func (parser *Parser) IsTransform() bool {
 	return parser.Token.Type == tok.T_NAME && parser.knownStructures.TransformParser(parser.Token.Text) != nil
 }
 
-func (parser *Parser) TransformFactory() hil.TransformFactory {
+func (parser *Parser) TransformFactory() hlv.TransformFactory {
 	if !parser.Expect(tok.T_NAME) {
 		return nil
 	}
@@ -335,7 +335,7 @@ func (parser *Parser) IsTransformFactory() bool {
 	return parser.Token.Type == tok.T_NAME && parser.knownStructures.TransformFactoryParser(parser.Token.Text) != nil
 }
 
-func (parser *Parser) ArtifactFactory() hil.ArtifactFactory {
+func (parser *Parser) ArtifactFactory() hlv.ArtifactFactory {
 	if !parser.Expect(tok.T_NAME) {
 		return nil
 	}

@@ -5,7 +5,7 @@ import (
 	herr "hike/error"
 	tok "hike/token"
 	prs "hike/parser"
-	hil "hike/hilevel"
+	hlv "hike/hilevel"
 	//abs "hike/abstract"
 	hlm "hike/hilvlimpl"
 )
@@ -60,7 +60,7 @@ func ParseStaticFile(parser *prs.Parser) *hlm.StaticFileFactory {
 				*optval = parser.Token.Text
 				parser.Next()
 			}
-			var generatingTransform hil.TransformFactory
+			var generatingTransform hlv.TransformFactory
 			switch {
 				case parser.Token.Type == tok.T_RBRACE:
 					parser.Next()
@@ -85,7 +85,7 @@ func ParseStaticFile(parser *prs.Parser) *hlm.StaticFileFactory {
 	}
 }
 
-func TopStaticFile(parser *prs.Parser) hil.ArtifactFactory {
+func TopStaticFile(parser *prs.Parser) hlv.ArtifactFactory {
 	factory := ParseStaticFile(parser)
 	if factory != nil {
 		return factory
