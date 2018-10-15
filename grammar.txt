@@ -14,10 +14,10 @@ artifact		::= file_artifact
 file_artifact	::= 'file' STRING (STRING | '{' file_body '}')
 file_body		::= STRING ('name' STRING)? transform?
 group_artifact	::= 'artifacts' STRING '{' group_body '}'
-group_body		::= 'name' STRING artifact*
+group_body		::= 'name' STRING artifact_ref*
 
 transform		::= exec_transform
-exec_transform	::= 'exec' STRING '{' command_word+ exec_option* artifact+ '}'
+exec_transform	::= 'exec' STRING '{' command_word+ exec_option* artifact_ref* '}'
 command_word	::= STRING
 					| 'source'
 					| 'dest'
