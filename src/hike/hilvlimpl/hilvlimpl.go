@@ -1,10 +1,192 @@
 package hilvlimpl
 
 import (
+	"regexp"
+	herr "hike/error"
 	hil "hike/hilevel"
+	gen "hike/generic"
+	hlv "hike/hilevel"
 	abs "hike/abstract"
+	con "hike/concrete"
 )
 
 // ---------------------------------------- TransformFactory ----------------------------------------
 
-//type 
+type TransformFactoryBase struct {
+	Description string
+	Arise *herr.AriseRef
+}
+
+type CommandTransformFactory struct {
+	TransformFactoryBase
+	gen.CommandTransformBase
+}
+
+func (factory *CommandTransformFactory) NewTransform(sources []abs.Artifact) (abs.Transform, herr.BuildError) {
+	command := gen.NewMultiCommandTransform(
+		factory.Description,
+		factory.Arise,
+		factory.CommandLine,
+		factory.Loud,
+		factory.SuffixIsDestination,
+	)
+	for _, source := range sources {
+		command.AddSource(source)
+	}
+	return command, nil
+}
+
+var _ hlv.TransformFactory = &CommandTransformFactory{}
+
+// ---------------------------------------- ArtifactFactory ----------------------------------------
+
+type ArtifactFactoryBase struct {
+	Arise *herr.AriseRef
+}
+
+type FileFactoryBase struct {
+	BaseDir string
+	GeneratingTransform hlv.TransformFactory
+}
+
+type StaticFileFactory struct {
+	ArtifactFactoryBase
+	FileFactoryBase
+	Path string
+	Name string
+	Key string
+}
+
+func (factory *StaticFileFactory) NewArtifact(
+	oldArtifacts []abs.Artifact,
+	state *spc.State,
+) (file abs.Artifact, err herr.BuildError) {
+	var kname string
+	switch {
+		case len(factory.Key) > 0:
+			kname = factory.Key
+		case len(factory.BaseDir) > 0:
+			kname = con.GuessFileArtifactName(factory.Path, factory.BaseDir)
+		default:
+			kname = con.GuessFileArtifactName(factory.Path, state.TopDir)
+	}
+	key := abs.ArtifactKey {
+		Project: state.ProjectName,
+		Artifact: kname,
+	}
+	var uiname string
+	switch {
+		case len(factory.Name) > 0:
+			uiname = factory.Name
+		case len(factory.BaseDir) > 0:
+			uiname = con.GuessFileArtifactName(factory.Path, factory.BaseDir)
+		default:
+			uiname = con.GuessFileArtifactName(factory.Path, state.TopDir)
+	}
+	var generatingTransform abs.Transform
+	if factory.GeneratingTransform != nil {
+		generatingTransform, err = factory.GeneratingTransform.NewTransform(oldArtifacts, state)
+		if err != nil {
+			return
+		}
+	}
+	file = con.NewFile(key, uiname, factory.Arise, path, generatingTransform)
+	err = state.RegisterArtifact(file, factory.Arise)
+	if err != nil {
+		file = nil
+	}
+	return
+}
+
+func (factory *StaticFileFactory) RequiresMerge() bool {
+	return true
+}
+
+var _ hlv.ArtifactFactory = &StaticFileFactory{}
+
+type RegexFileFactory struct {
+	ArtifactFactoryBase
+	FileFactoryBase
+	PathRegex regexp.Regexp
+	PathReplacement string
+	GroupName string
+	GroupKey string
+}
+
+func (factory *RegexFileFactory) NewArtifact(
+	oldArtifacts []abs.Artifact,
+	state *spc.State,
+) (finalFile abs.Artifact, err herr.BuildError) {
+	var files []abs.Artifact
+	var allPaths []string
+	var kname, uiname string
+	var generatingTransform abs.Transform
+	for _, oldArtifact := range oldArtifacts {
+		allPaths = oldArtifact.PathNames(allPaths)
+		paths := oldArtifact.PathNames(nil)
+		if factory.GeneratingTransform != nil {
+			generatingTransform, err = factory.GeneratingTransform.NewTransform([]abs.Artifact{oldArtifact}, state)
+			if err != nil {
+				return
+			}
+		}
+		for _, path := range paths {
+			newPath := factory.PathRegex.ReplaceAllString(path, factory.PathReplacement)
+			if len(factory.BaseDir) > 0 {
+				kname = con.GuessFileArtifactName(newPath, factory.BaseDir)
+			} else {
+				kname = con.GuessFileArtifactName(newPath, state.TopDir)
+			}
+			key := abs.ArtifactKey {
+				Project: state.ProjectName,
+				Artifact: kname,
+			}
+			file := con.NewFile(key, kname, factory.Arise, newPath, generatingTransform)
+			err = state.RegisterArtifact(file, factory.Arise)
+			if err != nil {
+				return
+			}
+			files = append(files, file)
+		}
+	}
+	if len(files) == 1 {
+		finalFile = files[0]
+	} else {
+		switch {
+			case len(factory.GroupKey) > 0:
+				kname = factory.GroupKey
+			case len(factory.BaseDir) > 0:
+				kname = con.GuessGroupArtifactName(allPaths, factory.BaseDir)
+			default:
+				kname = con.GuessGroupArtifactName(allPaths, state.TopDir)
+		}
+		key := abs.ArtifactKey {
+			Project: state.ProjectName,
+			Artifact: kname,
+		}
+		switch {
+			case len(factory.GroupName) > 0:
+				uiname = factory.GroupName
+			case len(factory.BaseDir) > 0:
+				uiname = con.GuessGroupArtifactName(allPaths, factory.BaseDir)
+			default:
+				uiname = con.GuessGroupArtifactName(allPaths, state.TopDir)
+		}
+		group := con.NewGroup(key, uiname, factory.Arise)
+		for _, child := range files {
+			group.AddChild(child)
+		}
+		err = state.RegisterArtifact(group, factory.Arise)
+		if err != nil {
+			return
+		}
+		finalFile = group
+	}
+	return
+}
+
+func (factory *RegexFileFactory) RequiresMerge() bool {
+	return false
+}
+
+var _ hlv.ArtifactFactory = &RegexFileFactory{}

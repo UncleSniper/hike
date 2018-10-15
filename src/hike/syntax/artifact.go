@@ -3,21 +3,11 @@ package syntax
 import (
 	"path/filepath"
 	herr "hike/error"
-	spc "hike/spec"
 	tok "hike/token"
 	prs "hike/parser"
 	abs "hike/abstract"
 	con "hike/concrete"
 )
-
-func GuessFileArtifactName(path string, config *spc.Config) string {
-	rel, err := filepath.Rel(config.TopDir, path)
-	if err == nil {
-		return filepath.ToSlash(rel)
-	} else {
-		return filepath.ToSlash(path)
-	}
-}
 
 func ParseFileArtifact(parser *prs.Parser) *con.FileArtifact {
 	if !parser.ExpectKeyword("file") {
@@ -38,16 +28,46 @@ func ParseFileArtifact(parser *prs.Parser) *con.FileArtifact {
 	}
 	switch parser.Token.Type {
 		case tok.T_STRING:
-			path := parser.Token.Text
+			relpath := filepath.FromSlash(parser.Token.Text)
+			path, nerr := filepath.Abs(relpath)
+			if nerr != nil {
+				parser.Fail(&con.CannotCanonicalizePathError {
+					Path: relpath,
+					OSError: nerr,
+					OperationArise: &herr.AriseRef {
+						Text: "file artifact path",
+						Location: &parser.Token.Location,
+					},
+				})
+				parser.Frame("file artifact", start)
+			}
 			parser.Next()
-			return con.NewFile(*key, GuessFileArtifactName(path, config), arise, path, nil)
+			file := con.NewFile(*key, con.GuessFileArtifactName(path, config.TopDir), arise, path, nil)
+			dup := parser.SpecState().RegisterArtifact(file, arise)
+			if dup != nil {
+				parser.Fail(dup)
+				return nil
+			}
+			return file
 		case tok.T_LBRACE:
 			parser.Next()
 			if !parser.ExpectExp(tok.T_STRING, "pathname") {
 				parser.Frame("file artifact", start)
 				return nil
 			}
-			path := parser.Token.Text
+			relpath := parser.Token.Text
+			path, nerr := filepath.Abs(relpath)
+			if nerr != nil {
+				parser.Fail(&con.CannotCanonicalizePathError {
+					Path: relpath,
+					OSError: nerr,
+					OperationArise: &herr.AriseRef {
+						Text: "file artifact path",
+						Location: &parser.Token.Location,
+					},
+				})
+				parser.Frame("file artifact", start)
+			}
 			parser.Next()
 			name := ""
 			haveName := false
@@ -58,7 +78,7 @@ func ParseFileArtifact(parser *prs.Parser) *con.FileArtifact {
 				parser.Next()
 				haveName = true
 			} else {
-				name = GuessFileArtifactName(path, config)
+				name = con.GuessFileArtifactName(path, config.TopDir)
 			}
 			var transform abs.Transform
 			haveTransform := false
@@ -88,7 +108,13 @@ func ParseFileArtifact(parser *prs.Parser) *con.FileArtifact {
 				return nil
 			}
 			parser.Next()
-			return con.NewFile(*key, name, arise, path, transform)
+			file := con.NewFile(*key, name, arise, path, transform)
+			dup := parser.SpecState().RegisterArtifact(file, arise)
+			if dup != nil {
+				parser.Fail(dup)
+				return nil
+			}
+			return file
 		default:
 			parser.Die("string (pathname) or '{'")
 			return nil
@@ -139,19 +165,30 @@ func ParseGroupArtifact(parser *prs.Parser) *con.GroupArtifact {
 		Location: start,
 	}
 	group := con.NewGroup(*key, name, arise)
+	specState := parser.SpecState()
+	dup := specState.RegisterArtifact(group, arise)
+	if dup != nil {
+		parser.Fail(dup)
+		return nil
+	}
 	for {
 		switch {
 			case parser.Token.Type == tok.T_RBRACE:
 				parser.Next()
 				return group
-			case parser.IsArtifact():
-				artifact := parser.Artifact()
+			case parser.IsArtifactRef():
+				artifact := parser.ArtifactRef(&herr.AriseRef {
+					Text: "group artifact child",
+					Location: &parser.Token.Location,
+				})
 				if artifact == nil {
 					return nil
 				}
-				group.AddChild(artifact)
+				artifact.InjectArtifact(specState, func(realArtifact abs.Artifact) {
+					group.AddChild(realArtifact)
+				})
 			default:
-				parser.Die("artifact or '}'")
+				parser.Die("artifact reference or '}'")
 				return nil
 		}
 	}

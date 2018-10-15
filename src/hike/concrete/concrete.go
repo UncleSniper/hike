@@ -3,6 +3,8 @@ package concrete
 import (
 	"os"
 	"time"
+	"strings"
+	"path/filepath"
 	herr "hike/error"
 	loc "hike/location"
 	abs "hike/abstract"
@@ -351,17 +353,8 @@ func (artifact *GroupArtifact) LatestModTime(arise *herr.AriseRef) (
 	return
 }
 
-func (artifact *GroupArtifact) Flatten() (err herr.BuildError) {
-	for _, child := range artifact.children {
-		err = child.Flatten()
-		if err != nil {
-			err.AddErrorFrame(&FlattenArtifactFrame {
-				Artifact: artifact,
-			})
-			return
-		}
-	}
-	return
+func (artifact *GroupArtifact) Flatten() herr.BuildError {
+	return nil
 }
 
 func (artifact *GroupArtifact) Require(plan *abs.Plan, requireArise *herr.AriseRef) (err herr.BuildError) {
@@ -560,4 +553,62 @@ func Attain(goal *abs.Goal, plan *abs.Plan) (err herr.BuildError) {
 		}
 	}
 	return
+}
+
+// ---------------------------------------- misc ----------------------------------------
+
+var sepString = string([]rune{os.PathSeparator})
+
+func GuessFileArtifactName(path string, base string) string {
+	rel, err := filepath.Rel(base, path)
+	if err == nil && strings.HasSuffix(path, sepString + rel) {
+		return filepath.ToSlash(rel)
+	} else {
+		return filepath.ToSlash(path)
+	}
+}
+
+func GuessGroupArtifactName(paths []string, base string) string {
+	switch len(paths) {
+		case 0:
+			return filepath.ToSlash(base)
+		case 1:
+			return filepath.ToSlash(paths[0])
+	}
+	var suffix []rune
+	var prefix string
+	var have, double bool
+	var suffixOffset int
+	for _, path := range paths {
+		path = filepath.Clean(path)
+		dir := filepath.Dir(path)
+		base := filepath.Base(path)
+		if have {
+			baseRunes := []rune(base)
+			max := len(suffix) - suffixOffset
+			if len(baseRunes) < max {
+				max = len(baseRunes)
+			}
+			for i := 1; i <= max; i++ {
+				if suffix[len(suffix) - i] != baseRunes[len(baseRunes) - i] {
+					suffixOffset = len(suffix) - i
+					break
+				}
+			}
+			if !double {
+				double = dir != prefix
+			}
+		} else {
+			have = true
+			suffix = []rune(base)
+			prefix = dir
+		}
+	}
+	var star string
+	if double {
+		star = "**"
+	} else {
+		star = "*"
+	}
+	return filepath.ToSlash(filepath.Join(base, star + string(suffix[suffixOffset:])))
 }

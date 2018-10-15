@@ -135,21 +135,22 @@ func ParseCommandTransform(parser *prs.Parser) *gen.MultiCommandTransform {
 		loud,
 		suffixIsDestination,
 	)
-	for parser.IsArtifact() {
-		source := parser.Artifact()
+	specState := parser.SpecState()
+	for parser.IsArtifactRef() {
+		source := parser.ArtifactRef(&herr.AriseRef {
+			Text: "command transform source",
+			Location: &parser.Token.Location,
+		})
 		if source == nil {
 			parser.Frame("command transform", start)
 			return nil
 		}
-		exec.AddSource(source)
-	}
-	if exec.SourceCount() == 0 {
-		parser.Die("command transform option or artifact")
-		parser.Frame("command transform", start)
-		return nil
+		source.InjectArtifact(specState, func(artifact abs.Artifact) {
+			exec.AddSource(artifact)
+		})
 	}
 	if parser.Token.Type != tok.T_RBRACE {
-		parser.Die("artifact or '}'")
+		parser.Die("artifact reference or '}'")
 		parser.Frame("command transform", start)
 		return nil
 	}
