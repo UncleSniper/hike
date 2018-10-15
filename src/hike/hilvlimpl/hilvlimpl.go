@@ -129,10 +129,31 @@ var _ hlv.ArtifactFactory = &StaticFileFactory{}
 type RegexFileFactory struct {
 	ArtifactFactoryBase
 	FileFactoryBase
-	PathRegex regexp.Regexp
+	PathRegex *regexp.Regexp
 	PathReplacement string
 	GroupName string
 	GroupKey string
+}
+
+func NewRegexFileFactory(
+	pathRegex *regexp.Regexp,
+	pathReplacement string,
+	groupName string,
+	groupKey string,
+	baseDir string,
+	generatingTransform hlv.TransformFactory,
+	arise *herr.AriseRef,
+) *RegexFileFactory {
+	factory := &RegexFileFactory {
+		PathRegex: pathRegex,
+		PathReplacement: pathReplacement,
+		GroupName: groupName,
+		GroupKey: groupKey,
+	}
+	factory.BaseDir = baseDir
+	factory.GeneratingTransform = generatingTransform
+	factory.Arise = arise
+	return factory
 }
 
 func (factory *RegexFileFactory) NewArtifact(

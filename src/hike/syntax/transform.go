@@ -2,12 +2,10 @@ package syntax
 
 import (
 	herr "hike/error"
-	//spc "hike/spec"
 	tok "hike/token"
 	prs "hike/parser"
 	gen "hike/generic"
 	abs "hike/abstract"
-	//con "hike/concrete"
 )
 
 func IsCommandWord(parser *prs.Parser) bool {
