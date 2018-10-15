@@ -9,18 +9,41 @@ attain			::= 'attain' NAME
 require			::= 'require' artifact_ref
 
 artifact_ref	::= STRING | artifact
+x_artifact_ref	::= 'artifact' STRING | artifact
 artifact		::= file_artifact
 					| group_artifact
+					| pipeline
 file_artifact	::= 'file' STRING (STRING | '{' file_body '}')
 file_body		::= STRING ('name' STRING)? transform?
 group_artifact	::= 'artifacts' STRING '{' group_body '}'
 group_body		::= 'name' STRING artifact_ref*
+pipeline		::= 'pipeline' '{' artifact_set ('merge'? artifact_fact)* '}'
 
 transform		::= exec_transform
-exec_transform	::= 'exec' STRING '{' command_word+ exec_option* artifact_ref* '}'
+exec_transform	::= 'exec' STRING '{' command_word+ exec_option* x_artifact_ref* '}'
 command_word	::= STRING
 					| 'source'
 					| 'dest'
 					| '{' command_word+ '}'
 exec_option		::= 'loud'
 					| 'suffixIsDestination'
+
+artifact_set	::= artifact
+					| artifact_each
+artifact_each	::= 'each' '{' artifact_set* '}'
+
+artifact_fact	::= static_file
+					| regex_file
+static_file		::= 'file' (STRING | '{' static_file_bdy '}')
+static_file_bdy	::= STRING static_file_opt* transform_fact?
+static_file_opt	::= 'key' STRING
+					| 'name' STRING
+					| 'base' STRING
+regex_file		::= 'regex'(STRING STRING | '{' regex_file_bdy '}')
+regex_file_bdy	::= STRING STRING regex_file_opt* transform_fact?
+regex_file_opt	::= 'key' STRING
+					| 'name' STRING
+					| 'base' STRING
+
+transform_fact	::= exec_xfrm_fact
+exec_xfrm_fact	::= 'exec' STRING '{' command_word+ exec_option* '}'
