@@ -47,6 +47,8 @@ regex_file_bdy	::= STRING STRING regex_file_opt* transform_fact?
 regex_file_opt	::= 'key' STRING
 					| 'name' STRING
 					| 'base' STRING
+					| 'rebaseFrom' STRING
+					| 'rebaseTo' STRING
 
 transform_fact	::= exec_xfrm_fact
 exec_xfrm_fact	::= 'exec' STRING '{' command_word+ exec_option* '}'
