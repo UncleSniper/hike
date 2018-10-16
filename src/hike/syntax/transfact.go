@@ -66,6 +66,9 @@ func ParseCommandTransformFactory(parser *prs.Parser) *hlm.CommandTransformFacto
 				gen.AssembleCommand(sources, destinations, words),
 			}
 		},
+		func(level uint) error {
+			return gen.DumpCommandWords(words, level)
+		},
 		loud,
 		suffixIsDestination,
 	)

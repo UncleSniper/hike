@@ -65,6 +65,9 @@ func ParseCommandTransform(parser *prs.Parser) *gen.MultiCommandTransform {
 				gen.AssembleCommand(sources, destinations, words),
 			}
 		},
+		func(level uint) error {
+			return gen.DumpCommandWords(words, level)
+		},
 		loud,
 		suffixIsDestination,
 	)

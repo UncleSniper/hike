@@ -1,6 +1,7 @@
 package generic
 
 import (
+	"os"
 	"fmt"
 	"bufio"
 	"os/exec"
@@ -88,6 +89,7 @@ var _ herr.BuildError = &CommandFailedError{}
 // ---------------------------------------- Step ----------------------------------------
 
 type VariableCommandLine func([]string, []string) [][]string
+type CommandLineDumper func(uint) error
 
 type CommandStep struct {
 	con.StepBase
@@ -128,6 +130,7 @@ var _ abs.Step = &CommandStep{}
 
 type CommandTransformBase struct {
 	CommandLine VariableCommandLine
+	DumpCommandLine CommandLineDumper
 	Loud bool
 	SuffixIsDestination bool
 }
@@ -174,6 +177,36 @@ func (transform *SingleCommandTransform) Plan(destination abs.Artifact, plan *ab
 	})
 }
 
+func (transform *SingleCommandTransform) DumpTransform(level uint) error {
+	prn := herr.NewErrorPrinter()
+	prn.Out = os.Stdout
+	prn.Level(level)
+	prn.Print("exec ")
+	con.PrintErrorString(prn, transform.Description)
+	prn.Println(" {")
+	prn.Indent(1)
+	err := transform.DumpCommandLine(level + 1)
+	if err != nil {
+		prn.Fail(err)
+	}
+	prn.Println()
+	if transform.Loud {
+		prn.Indent(1)
+		prn.Println("loud")
+	}
+	if transform.SuffixIsDestination {
+		prn.Indent(1)
+		prn.Println("suffixIsDestination")
+	}
+	prn.Indent(1)
+	prn.Print("artifact ")
+	con.PrintErrorString(prn, transform.Source.ArtifactKey().Unified())
+	prn.Println()
+	prn.Indent(0)
+	prn.Print("}")
+	return prn.Done()
+}
+
 var _ abs.Transform = &SingleCommandTransform{}
 
 func NewSingleCommandTransform(
@@ -181,6 +214,7 @@ func NewSingleCommandTransform(
 	arise *herr.AriseRef,
 	source abs.Artifact,
 	commandLine VariableCommandLine,
+	dumpCommandLine CommandLineDumper,
 	loud bool,
 	suffixIsDestination bool,
 ) *SingleCommandTransform {
@@ -189,6 +223,7 @@ func NewSingleCommandTransform(
 	transform.Arise = arise
 	transform.Source = source
 	transform.CommandLine = commandLine
+	transform.DumpCommandLine = dumpCommandLine
 	transform.Loud = loud
 	transform.SuffixIsDestination = suffixIsDestination
 	return transform
@@ -212,12 +247,45 @@ func (transform *MultiCommandTransform) Plan(destination abs.Artifact, plan *abs
 	})
 }
 
+func (transform *MultiCommandTransform) DumpTransform(level uint) error {
+	prn := herr.NewErrorPrinter()
+	prn.Out = os.Stdout
+	prn.Level(level)
+	prn.Print("exec ")
+	con.PrintErrorString(prn, transform.Description)
+	prn.Println(" {")
+	prn.Indent(1)
+	err := transform.DumpCommandLine(level + 1)
+	if err != nil {
+		prn.Fail(err)
+	}
+	prn.Println()
+	if transform.Loud {
+		prn.Indent(1)
+		prn.Println("loud")
+	}
+	if transform.SuffixIsDestination {
+		prn.Indent(1)
+		prn.Println("suffixIsDestination")
+	}
+	for _, source := range transform.Sources {
+		prn.Indent(1)
+		prn.Print("artifact ")
+		con.PrintErrorString(prn, source.ArtifactKey().Unified())
+		prn.Println()
+		prn.Indent(0)
+		prn.Print("}")
+	}
+	return prn.Done()
+}
+
 var _ abs.Transform = &MultiCommandTransform{}
 
 func NewMultiCommandTransform(
 	description string,
 	arise *herr.AriseRef,
 	commandLine VariableCommandLine,
+	dumpCommandLine CommandLineDumper,
 	loud bool,
 	suffixIsDestination bool,
 ) *MultiCommandTransform {
@@ -225,6 +293,7 @@ func NewMultiCommandTransform(
 	transform.Description = description
 	transform.Arise = arise
 	transform.CommandLine = commandLine
+	transform.DumpCommandLine = dumpCommandLine
 	transform.Loud = loud
 	transform.SuffixIsDestination = suffixIsDestination
 	return transform

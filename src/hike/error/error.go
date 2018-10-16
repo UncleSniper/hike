@@ -144,6 +144,12 @@ func (printer *ErrorPrinter) Inject(callback func(level uint) error, level uint)
 	}
 }
 
+func (printer *ErrorPrinter) Fail(err error) {
+	if printer.firstError == nil {
+		printer.firstError = err
+	}
+}
+
 func (printer *ErrorPrinter) Done() error {
 	return printer.firstError
 }

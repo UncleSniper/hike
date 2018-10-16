@@ -6,6 +6,7 @@ import (
 	"strings"
 	"path/filepath"
 	herr "hike/error"
+	tok "hike/token"
 	loc "hike/location"
 	abs "hike/abstract"
 )
@@ -257,6 +258,30 @@ func (artifact *FileArtifact) Require(plan *abs.Plan, requireArise *herr.AriseRe
 	return
 }
 
+func (artifact *FileArtifact) DumpArtifact(level uint) error {
+	prn := herr.NewErrorPrinter()
+	prn.Out = os.Stdout
+	prn.Level(level)
+	prn.Print("file ")
+	PrintErrorString(prn, artifact.Key.Unified())
+	prn.Println(" {")
+	prn.Indent(1)
+	PrintErrorString(prn, artifact.Path)
+	prn.Println()
+	prn.Indent(1)
+	prn.Print("name ")
+	PrintErrorString(prn, artifact.Name)
+	prn.Println()
+	if artifact.GeneratingTransform != nil {
+		prn.Indent(1)
+		artifact.GeneratingTransform.DumpTransform(level + 1)
+		prn.Println()
+	}
+	prn.Indent(0)
+	prn.Print("}")
+	return prn.Done()
+}
+
 var _ abs.Artifact = &FileArtifact{}
 
 func NewFile(
@@ -372,6 +397,27 @@ func (artifact *GroupArtifact) Require(plan *abs.Plan, requireArise *herr.AriseR
 	}
 	plan.BroughtUpToDate(artifact)
 	return
+}
+
+func (artifact *GroupArtifact) DumpArtifact(level uint) error {
+	prn := herr.NewErrorPrinter()
+	prn.Out = os.Stdout
+	prn.Level(level)
+	prn.Print("artifacts ")
+	PrintErrorString(prn, artifact.Key.Unified())
+	prn.Println(" {")
+	prn.Indent(1)
+	prn.Print("name ")
+	PrintErrorString(prn, artifact.Name)
+	prn.Println()
+	for _, child := range artifact.children {
+		prn.Indent(1)
+		PrintErrorString(prn, child.ArtifactKey().Unified())
+		prn.Println()
+	}
+	prn.Indent(0)
+	prn.Print("}")
+	return prn.Done()
 }
 
 var _ abs.Artifact = &GroupArtifact{}
@@ -634,5 +680,14 @@ func RebasePath(oldPath, fromBase, toBase string) string {
 		return filepath.Join(toBase, tmp)
 	} else {
 		return oldPath
+	}
+}
+
+func PrintErrorString(printer *herr.ErrorPrinter, str string) {
+	quoted, err := tok.EscapeString(str, true)
+	if err == nil {
+		printer.Print(quoted)
+	} else {
+		printer.Fail(err)
 	}
 }

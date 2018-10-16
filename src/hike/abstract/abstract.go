@@ -26,6 +26,7 @@ type Artifact interface {
 	LatestModTime(arise *herr.AriseRef) (time.Time, herr.BuildError, bool)
 	Flatten() herr.BuildError
 	Require(plan *Plan, arise *herr.AriseRef) herr.BuildError
+	DumpArtifact(level uint) error
 }
 
 var nextArtifactID uint = 0
@@ -45,6 +46,7 @@ type Transform interface {
 	TransformDescr() string
 	TransformArise() *herr.AriseRef
 	Plan(destination Artifact, plan *Plan) herr.BuildError
+	DumpTransform(level uint) error
 }
 
 type Action interface {
