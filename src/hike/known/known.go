@@ -11,6 +11,7 @@ func RegisterCoreStructures(known *prs.KnownStructures) {
 	known.RegisterActionParser("require", syn.TopRequireAction)
 	known.RegisterArtifactParser("file", syn.TopFileArtifact)
 	known.RegisterArtifactParser("artifacts", syn.TopGroupArtifact)
+	known.RegisterArtifactParser("pipeline", syn.ParsePipelineArtifact)
 	known.RegisterTransformParser("exec", syn.TopCommandTransform)
 	known.RegisterArtifactSetParser("each", syn.ParseArtifactEach)
 	known.RegisterArtifactFactoryParser("file", syn.TopStaticFile)
