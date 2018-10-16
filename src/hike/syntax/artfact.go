@@ -131,7 +131,7 @@ func ParseRegexFile(parser *prs.Parser) *hlm.RegexFileFactory {
 			parser.ExpectExp(tok.T_STRING, "path replacement")
 			pathReplacement := parser.Token.Text
 			parser.Next()
-			return hlm.NewRegexFileFactory(pathRegex, pathReplacement, "", "", "", nil, arise)
+			return hlm.NewRegexFileFactory(pathRegex, pathReplacement, "", "", "", "", "", nil, arise)
 		case tok.T_LBRACE:
 			parser.Next()
 			if !parser.ExpectExp(tok.T_STRING, "path regex") {
@@ -146,7 +146,7 @@ func ParseRegexFile(parser *prs.Parser) *hlm.RegexFileFactory {
 			parser.ExpectExp(tok.T_STRING, "path replacement")
 			pathReplacement := parser.Token.Text
 			parser.Next()
-			var key, name, base, optdesc string
+			var key, name, base, rebaseFrom, rebaseTo, optdesc string
 			var optval *string
 		  opts:
 			for parser.Token.Type == tok.T_NAME {
@@ -160,6 +160,12 @@ func ParseRegexFile(parser *prs.Parser) *hlm.RegexFileFactory {
 					case "base":
 						optval = &base
 						optdesc = "artifact base directory"
+					case "rebaseFrom":
+						optval = &rebaseFrom
+						optdesc = "artifact rebase source directory"
+					case "rebaseTo":
+						optval = &rebaseTo
+						optdesc = "artifact rebase destination directory"
 					default:
 						break opts
 				}
@@ -190,7 +196,17 @@ func ParseRegexFile(parser *prs.Parser) *hlm.RegexFileFactory {
 					parser.Frame("regexp file artifact factory", start)
 					return nil
 			}
-			return hlm.NewRegexFileFactory(pathRegex, pathReplacement, name, key, base, generatingTransform, arise)
+			return hlm.NewRegexFileFactory(
+				pathRegex,
+				pathReplacement,
+				name,
+				key,
+				rebaseFrom,
+				rebaseTo,
+				base,
+				generatingTransform,
+				arise,
+			)
 		default:
 			parser.Die("string (path regex) or '{'")
 			parser.Frame("regexp file artifact factory", start)

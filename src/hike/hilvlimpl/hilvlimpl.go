@@ -149,6 +149,8 @@ type RegexFileFactory struct {
 	PathReplacement string
 	GroupName string
 	GroupKey string
+	RebaseFrom string
+	RebaseTo string
 }
 
 func NewRegexFileFactory(
@@ -156,6 +158,8 @@ func NewRegexFileFactory(
 	pathReplacement string,
 	groupName string,
 	groupKey string,
+	rebaseFrom string,
+	rebaseTo string,
 	baseDir string,
 	generatingTransform hlv.TransformFactory,
 	arise *herr.AriseRef,
@@ -165,6 +169,8 @@ func NewRegexFileFactory(
 		PathReplacement: pathReplacement,
 		GroupName: groupName,
 		GroupKey: groupKey,
+		RebaseFrom: rebaseFrom,
+		RebaseTo: rebaseTo,
 	}
 	factory.BaseDir = baseDir
 	factory.GeneratingTransform = generatingTransform
@@ -180,6 +186,7 @@ func (factory *RegexFileFactory) NewArtifact(
 	var allPaths []string
 	var kname, uiname string
 	var generatingTransform abs.Transform
+	shouldRebase := len(factory.RebaseFrom) > 0 || len(factory.RebaseTo) > 0
 	for _, oldArtifact := range oldArtifacts {
 		allPaths = oldArtifact.PathNames(allPaths)
 		paths := oldArtifact.PathNames(nil)
@@ -191,6 +198,9 @@ func (factory *RegexFileFactory) NewArtifact(
 		}
 		for _, path := range paths {
 			newPath := factory.PathRegex.ReplaceAllString(path, factory.PathReplacement)
+			if shouldRebase {
+				newPath = con.RebasePath(newPath, factory.RebaseFrom, factory.RebaseTo)
+			}
 			if len(factory.BaseDir) > 0 {
 				kname = con.GuessFileArtifactName(newPath, factory.BaseDir)
 			} else {
