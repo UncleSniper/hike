@@ -71,6 +71,7 @@ func ParsePipelineArtifact(parser *prs.Parser) abs.Artifact {
 			case parser.IsArtifactFactory():
 				merge = false
 			case parser.Token.Type == tok.T_RBRACE:
+				parser.Next()
 				break steps
 			default:
 				parser.Die("'merge', artifact factory or '}'")

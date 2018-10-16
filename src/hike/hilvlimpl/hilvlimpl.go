@@ -132,8 +132,9 @@ func (factory *StaticFileFactory) NewArtifact(
 		}
 	}
 	file = con.NewFile(key, uiname, factory.Arise, factory.Path, generatingTransform)
-	err = state.RegisterArtifact(file, factory.Arise)
-	if err != nil {
+	dup := state.RegisterArtifact(file, factory.Arise)
+	if dup != nil {
+		err = dup
 		file = nil
 	}
 	return
@@ -214,8 +215,9 @@ func (factory *RegexFileFactory) NewArtifact(
 				Artifact: kname,
 			}
 			file := con.NewFile(key, kname, factory.Arise, newPath, generatingTransform)
-			err = state.RegisterArtifact(file, factory.Arise)
-			if err != nil {
+			dup := state.RegisterArtifact(file, factory.Arise)
+			if dup != nil {
+				err = dup
 				return
 			}
 			files = append(files, file)
@@ -248,8 +250,9 @@ func (factory *RegexFileFactory) NewArtifact(
 		for _, child := range files {
 			group.AddChild(child)
 		}
-		err = state.RegisterArtifact(group, factory.Arise)
-		if err != nil {
+		dup := state.RegisterArtifact(group, factory.Arise)
+		if dup != nil {
+			err = dup
 			return
 		}
 		finalFile = group

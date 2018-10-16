@@ -13,7 +13,7 @@ type AriseRef struct {
 }
 
 func (ref *AriseRef) PrintArise(level uint) error {
-	prn := &ErrorPrinter{}
+	prn := NewErrorPrinter()
 	prn.Println("arising from")
 	prn.Indent(level + 1)
 	prn.Println(ref.Text)
@@ -56,7 +56,7 @@ func (err *BuildErrorBase) AddErrorFrame(frame BuildFrame) {
 
 func (base *BuildErrorBase) PrintBacktrace(level uint) error {
 	count := len(base.frames)
-	prn := &ErrorPrinter{}
+	prn := NewErrorPrinter()
 	prn.Level(level)
 	for i := 0; i < count; i++ {
 		prn.Println()
