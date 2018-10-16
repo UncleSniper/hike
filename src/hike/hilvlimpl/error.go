@@ -13,7 +13,7 @@ type IllegalRegexError struct {
 }
 
 func (illegal *IllegalRegexError) PrintBuildError(level uint) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Level(level)
 	prn.Println("Illegal regular expression")
 	prn.Indent(1)

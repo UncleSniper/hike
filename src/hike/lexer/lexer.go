@@ -64,7 +64,7 @@ func (lerr *LexicalError) PrintBuildError(level uint) error {
 	} else {
 		unexpected = strconv.QuoteRune(lerr.Unexpected)
 	}
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Level(level)
 	prn.Printf("Lexical error near %s at ", unexpected)
 	prn.Location(lerr.Location)
@@ -90,7 +90,7 @@ type StringBufferError struct {
 }
 
 func (buferr *StringBufferError) PrintBuildError(level uint) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Print("Internal error in hikefile lexer at ")
 	prn.Location(buferr.Location)
 	prn.Printf(": Failed to write to string buffer: %s", buferr.TrueError.Error())
@@ -111,7 +111,7 @@ type HikefileIOError struct {
 }
 
 func (ioerr *HikefileIOError) PrintBuildError(level uint) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Print("I/O error reading hikefile at ")
 	prn.Location(ioerr.Location)
 	prn.Printf(": %s", ioerr.TrueError.Error())

@@ -13,7 +13,7 @@ import (
 // ---------------------------------------- BuildFrame ----------------------------------------
 
 func PrintArtifactErrorFrameBase(level uint, action string, artifact abs.Artifact) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Level(level)
 	prn.Printf("%s artifact\n", action)
 	prn.Indent(1)
@@ -48,7 +48,7 @@ type ApplyTransformFrame struct {
 }
 
 func (frame *ApplyTransformFrame) PrintErrorFrame(level uint) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Level(level)
 	prn.Println("applying transform")
 	prn.Indent(1)
@@ -65,7 +65,7 @@ type AttainGoalFrame struct {
 }
 
 func (frame *AttainGoalFrame) PrintErrorFrame(level uint) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Printf("attaining goal '%s' ", frame.Goal.Name)
 	prn.Arise(frame.Goal.Arise, level)
 	return prn.Done()
@@ -78,7 +78,7 @@ type PerformActionFrame struct {
 }
 
 func (frame *PerformActionFrame) PrintErrorFrame(level uint) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Printf("performing action '%s' ", frame.Action.SimpleDescr())
 	prn.Arise(frame.Action.ActionArise(), level)
 	return prn.Done()
@@ -93,7 +93,7 @@ type NoGeneratorError struct {
 }
 
 func (nogen *NoGeneratorError) PrintBuildError(level uint) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Level(level)
 	prn.Println("Don't know how to obtain artifact")
 	prn.Indent(1)
@@ -122,7 +122,7 @@ type CannotStatError struct {
 }
 
 func (cannot *CannotStatError) PrintBuildError(level uint) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Level(level)
 	prn.Println("Failed to stat file")
 	prn.Indent(1)

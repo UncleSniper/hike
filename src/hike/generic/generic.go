@@ -32,7 +32,7 @@ type CommandFailedError struct {
 }
 
 func (failed *CommandFailedError) PrintBuildError(level uint) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Level(level)
 	prn.Println("Command")
 	prn.Indent(1)

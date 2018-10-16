@@ -2,6 +2,7 @@ package error
 
 import (
 	"os"
+	"io"
 	"fmt"
 	loc "hike/location"
 )
@@ -25,9 +26,9 @@ func (ref *AriseRef) PrintArise(level uint) error {
 	return prn.Done()
 }
 
-func IndentError(level uint) (err error) {
+func IndentError(level uint, out io.Writer) (err error) {
 	for ; level > 0; level-- {
-		_, err = fmt.Fprint(os.Stderr, "    ")
+		_, err = fmt.Fprint(out, "    ")
 		if err != nil {
 			break
 		}
@@ -71,26 +72,33 @@ func (base *BuildErrorBase) InjectBacktrace(printer *ErrorPrinter, level uint) {
 	}, level)
 }
 
+func NewErrorPrinter() *ErrorPrinter {
+	return &ErrorPrinter {
+		Out: os.Stderr,
+	}
+}
+
 type ErrorPrinter struct {
 	firstError error
 	level uint
+	Out io.Writer
 }
 
 func (printer *ErrorPrinter) Print(values ...interface{}) {
 	if printer.firstError == nil {
-		_, printer.firstError = fmt.Fprint(os.Stderr, values...)
+		_, printer.firstError = fmt.Fprint(printer.Out, values...)
 	}
 }
 
 func (printer *ErrorPrinter) Println(values ...interface{}) {
 	if printer.firstError == nil {
-		_, printer.firstError = fmt.Fprintln(os.Stderr, values...)
+		_, printer.firstError = fmt.Fprintln(printer.Out, values...)
 	}
 }
 
 func (printer *ErrorPrinter) Printf(format string, values ...interface{}) {
 	if printer.firstError == nil {
-		_, printer.firstError = fmt.Fprintf(os.Stderr, format, values...)
+		_, printer.firstError = fmt.Fprintf(printer.Out, format, values...)
 	}
 }
 
@@ -100,7 +108,7 @@ func (printer *ErrorPrinter) Level(level uint) {
 
 func (printer *ErrorPrinter) Indent(level uint) {
 	if printer.firstError == nil {
-		printer.firstError = IndentError(printer.level + level)
+		printer.firstError = IndentError(printer.level + level, printer.Out)
 	}
 }
 
@@ -123,7 +131,7 @@ func (printer *ErrorPrinter) Location(location *loc.Location) {
 			printer.firstError = err
 			return
 		}
-		_, printer.firstError = fmt.Fprint(os.Stderr, str)
+		_, printer.firstError = fmt.Fprint(printer.Out, str)
 	}
 }
 

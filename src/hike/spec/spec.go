@@ -14,7 +14,7 @@ type DuplicateGoalError struct {
 }
 
 func (duplicate *DuplicateGoalError) PrintBuildError(level uint) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Level(level)
 	prn.Println("Goal name clash:", duplicate.OldGoal.Name)
 	prn.Indent(1)
@@ -45,7 +45,7 @@ type NoSuchGoalError struct {
 }
 
 func (no *NoSuchGoalError) PrintBuildError(level uint) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Level(level)
 	prn.Println("No such goal:", no.Name)
 	prn.Indent(1)
@@ -73,7 +73,7 @@ type DuplicateArtifactError struct {
 }
 
 func (duplicate *DuplicateArtifactError) PrintBuildError(level uint) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Level(level)
 	prn.Println("Artifact key clash:", duplicate.OldArtifact.ArtifactKey().Unified())
 	prn.Indent(1)
@@ -104,7 +104,7 @@ type NoSuchArtifactError struct {
 }
 
 func (no *NoSuchArtifactError) PrintBuildError(level uint) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Level(level)
 	prn.Println("No such artifact:", no.Key.Unified())
 	prn.Indent(1)

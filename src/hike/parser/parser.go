@@ -19,7 +19,7 @@ type ParseFrame struct {
 }
 
 func (frame *ParseFrame) PrintErrorFrame(level uint) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Printf("parsing %s starting at ", frame.What)
 	prn.Location(frame.Start)
 	return prn.Done()
@@ -36,7 +36,7 @@ type SyntaxError struct {
 }
 
 func (syntax *SyntaxError) PrintBuildError(level uint) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Level(level)
 	prn.Print("Syntax error at ")
 	prn.Location(&syntax.Near.Location)

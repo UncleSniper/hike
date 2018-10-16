@@ -103,3 +103,10 @@ func ParseGoal(parser *prs.Parser) *abs.Goal {
 func TopGoal(parser *prs.Parser) {
 	ParseGoal(parser)
 }
+
+func ToplevelArtifact(parser *prs.Parser) {
+	if parser.ExpectKeyword("artifact") {
+		parser.Next()
+		parser.Artifact()
+	}
+}

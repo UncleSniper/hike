@@ -13,7 +13,7 @@ type CannotCanonicalizePathError struct {
 }
 
 func (cannot *CannotCanonicalizePathError) PrintBuildError(level uint) error {
-	prn := &herr.ErrorPrinter{}
+	prn := herr.NewErrorPrinter()
 	prn.Level(level)
 	prn.Println("Failed to canonicalize path")
 	prn.Indent(1)
