@@ -17,7 +17,10 @@ file_artifact	::= 'file' STRING (STRING | '{' file_body '}')
 file_body		::= STRING ('name' STRING)? transform?
 group_artifact	::= 'artifacts' STRING '{' group_body '}'
 group_body		::= 'name' STRING artifact_ref*
-pipeline		::= 'pipeline' '{' artifact_set ('merge'? artifact_fact)* '}'
+pipeline		::= 'pipeline' '{' pipeline_opt* artifact_set ('merge'? artifact_fact)* '}'
+pipeline_opt	::= 'key' STRING
+					| 'name' STRING
+					| 'base' STRING
 
 transform		::= exec_transform
 exec_transform	::= 'exec' STRING '{' command_word+ exec_option* x_artifact_ref* '}'
