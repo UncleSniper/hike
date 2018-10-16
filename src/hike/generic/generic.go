@@ -273,9 +273,9 @@ func (transform *MultiCommandTransform) DumpTransform(level uint) error {
 		prn.Print("artifact ")
 		con.PrintErrorString(prn, source.ArtifactKey().Unified())
 		prn.Println()
-		prn.Indent(0)
-		prn.Print("}")
 	}
+	prn.Indent(0)
+	prn.Print("}")
 	return prn.Done()
 }
 

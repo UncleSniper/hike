@@ -177,6 +177,14 @@ func (state *State) RegisterArtifact(artifact abs.Artifact, arise *herr.AriseRef
 	return nil
 }
 
+func (state *State) KnownArtifacts() []abs.Artifact {
+	var all []abs.Artifact
+	for _, artifact := range state.artifacts {
+		all = append(all, artifact)
+	}
+	return all
+}
+
 func (state *State) SlateResolver(resolver PendingResolver) {
 	state.pendingResolutions = append(state.pendingResolutions, resolver)
 }

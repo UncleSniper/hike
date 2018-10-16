@@ -51,7 +51,11 @@ func main() {
 	const pretendUsage = "Print the plan, but do not execute it."
 	flag.BoolVar(&pretend, "pretend", false, pretendUsage)
 	flag.BoolVar(&pretend, "p", false, pretendUsage)
+	var dumpStruct bool
+	const dumpStructUsage = "Dump artifact/transform structure (and quit if no goal given)."
+	flag.BoolVar(&dumpStruct, "dump", false, dumpStructUsage)
 	flag.Parse()
+	noDefaultBuild := dumpStruct
 	cwd, nerr := os.Getwd()
 	if nerr != nil {
 		fmt.Fprintln(os.Stderr, "Oyyyy, couldn't determine current working directory (say whaaaaat):", nerr.Error())
@@ -73,8 +77,25 @@ func main() {
 	if err != nil {
 		die(err)
 	}
+	if dumpStruct {
+		for _, artifact := range rootState.KnownArtifacts() {
+			nerr = artifact.DumpArtifact(0)
+			if nerr != nil {
+				fmt.Fprintln(os.Stderr, "Failed to dump artifacts:", nerr.Error())
+				os.Exit(1)
+			}
+			_, nerr = fmt.Println()
+			if nerr != nil {
+				fmt.Fprintln(os.Stderr, "Failed to dump artifacts:", nerr.Error())
+				os.Exit(1)
+			}
+		}
+	}
 	goalNames := flag.Args()
 	if len(goalNames) == 0 {
+		if noDefaultBuild {
+			os.Exit(0)
+		}
 		goalNames = []string{DEFAULT_GOAL}
 	}
 	var goals []*abs.Goal
