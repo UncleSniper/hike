@@ -460,31 +460,39 @@ func (base *TransformBase) TransformArise() *herr.AriseRef {
 	return base.Arise
 }
 
+func xformFrame(err herr.BuildError, transform abs.Transform) herr.BuildError {
+	if err != nil {
+		err.AddErrorFrame(&ApplyTransformFrame {
+			Transform: transform,
+		})
+	}
+	return err
+}
+
 func PlanSingleTransform(
 	transform abs.Transform,
 	source, destination abs.Artifact,
 	plan *abs.Plan,
 	planner func() herr.BuildError,
 ) herr.BuildError {
+	stepCount := plan.StepCount()
+	rerr := source.Require(plan, transform.TransformArise())
+	if rerr != nil {
+		return xformFrame(rerr, transform)
+	}
+	if plan.StepCount() != stepCount {
+		return xformFrame(planner(), transform)
+	}
 	smod, serr, _ := source.LatestModTime(transform.TransformArise())
 	if serr != nil {
-		serr.AddErrorFrame(&ApplyTransformFrame {
-			Transform: transform,
-		})
-		return serr
+		return xformFrame(serr, transform)
 	}
 	dmod, derr, dmiss := destination.EarliestModTime(transform.TransformArise())
 	if derr != nil {
-		derr.AddErrorFrame(&ApplyTransformFrame {
-			Transform: transform,
-		})
-		return derr
+		return xformFrame(derr, transform)
 	}
 	if dmiss || smod.After(dmod) {
-		perr := planner()
-		if perr != nil {
-			return perr
-		}
+		return xformFrame(planner(), transform)
 	}
 	return nil
 }
@@ -496,12 +504,19 @@ func PlanMultiTransform(
 	plan *abs.Plan,
 	planner func() herr.BuildError,
 ) herr.BuildError {
+	stepCount := plan.StepCount()
+	for _, source := range sources {
+		rerr := source.Require(plan, transform.TransformArise())
+		if rerr != nil {
+			return xformFrame(rerr, transform)
+		}
+	}
+	if plan.StepCount() != stepCount {
+		return xformFrame(planner(), transform)
+	}
 	dmod, derr, dmiss := destination.EarliestModTime(transform.TransformArise())
 	if derr != nil {
-		derr.AddErrorFrame(&ApplyTransformFrame {
-			Transform: transform,
-		})
-		return derr
+		return xformFrame(derr, transform)
 	}
 	apply := dmiss
 	for _, source := range sources {
@@ -510,20 +525,14 @@ func PlanMultiTransform(
 		}
 		smod, serr, _ := source.LatestModTime(transform.TransformArise())
 		if serr != nil {
-			serr.AddErrorFrame(&ApplyTransformFrame {
-				Transform: transform,
-			})
-			return serr
+			return xformFrame(serr, transform)
 		}
 		if smod.After(dmod) {
 			apply = true
 		}
 	}
 	if apply {
-		perr := planner()
-		if perr != nil {
-			return perr
-		}
+		return xformFrame(planner(), transform)
 	}
 	return nil
 }
