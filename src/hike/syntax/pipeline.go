@@ -59,7 +59,7 @@ func ParsePipelineArtifact(parser *prs.Parser) abs.Artifact {
 		parser.Next()
 	}
 	if !parser.IsArtifactSet() {
-		parser.Die("pieline option or artifact set (initial tip)")
+		parser.Die("pipeline option or artifact set (initial tip)")
 		parser.Frame("pipeline", start)
 		return nil
 	}
