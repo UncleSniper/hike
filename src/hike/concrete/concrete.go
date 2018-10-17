@@ -670,21 +670,9 @@ func GuessGroupArtifactName(paths []string, base string) string {
 
 func RebasePath(oldPath, fromBase, toBase string) string {
 	oldPath = filepath.FromSlash(oldPath)
-	tmp, err := filepath.Abs(oldPath)
-	if err == nil {
-		oldPath = tmp
-	}
 	fromBase = filepath.FromSlash(fromBase)
-	tmp, err = filepath.Abs(fromBase)
-	if err == nil {
-		fromBase = tmp
-	}
 	toBase = filepath.FromSlash(toBase)
-	tmp, err = filepath.Abs(toBase)
-	if err == nil {
-		toBase = tmp
-	}
-	tmp, err = filepath.Rel(fromBase, oldPath)
+	tmp, err := filepath.Rel(fromBase, oldPath)
 	if err == nil && strings.HasSuffix(oldPath, sepString + tmp) {
 		return filepath.Join(toBase, tmp)
 	} else {

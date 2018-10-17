@@ -1,7 +1,6 @@
 package syntax
 
 import (
-	"path/filepath"
 	herr "hike/error"
 	tok "hike/token"
 	prs "hike/parser"
@@ -26,21 +25,10 @@ func ParseFileArtifact(parser *prs.Parser) *con.FileArtifact {
 		Text: "'file' stanza",
 		Location: start,
 	}
+	specState := parser.SpecState()
 	switch parser.Token.Type {
 		case tok.T_STRING:
-			relpath := filepath.FromSlash(parser.Token.Text)
-			path, nerr := filepath.Abs(relpath)
-			if nerr != nil {
-				parser.Fail(&con.CannotCanonicalizePathError {
-					Path: relpath,
-					OSError: nerr,
-					OperationArise: &herr.AriseRef {
-						Text: "file artifact path",
-						Location: &parser.Token.Location,
-					},
-				})
-				parser.Frame("file artifact", start)
-			}
+			path := specState.Config.RealPath(parser.Token.Text)
 			parser.Next()
 			file := con.NewFile(*key, con.GuessFileArtifactName(path, config.TopDir), arise, path, nil)
 			dup := parser.SpecState().RegisterArtifact(file, arise)
@@ -55,19 +43,7 @@ func ParseFileArtifact(parser *prs.Parser) *con.FileArtifact {
 				parser.Frame("file artifact", start)
 				return nil
 			}
-			relpath := parser.Token.Text
-			path, nerr := filepath.Abs(relpath)
-			if nerr != nil {
-				parser.Fail(&con.CannotCanonicalizePathError {
-					Path: relpath,
-					OSError: nerr,
-					OperationArise: &herr.AriseRef {
-						Text: "file artifact path",
-						Location: &parser.Token.Location,
-					},
-				})
-				parser.Frame("file artifact", start)
-			}
+			path := specState.Config.RealPath(parser.Token.Text)
 			parser.Next()
 			name := ""
 			haveName := false

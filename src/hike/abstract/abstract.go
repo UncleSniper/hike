@@ -5,6 +5,8 @@ import (
 	herr "hike/error"
 )
 
+// ---------------------------------------- ArtifactKey ----------------------------------------
+
 type ArtifactKey struct {
 	Project string
 	Artifact string
@@ -13,6 +15,8 @@ type ArtifactKey struct {
 func (key *ArtifactKey) Unified() string {
 	return key.Project + "::" + key.Artifact
 }
+
+// ---------------------------------------- Artifact ----------------------------------------
 
 type ArtifactID uint
 
@@ -37,10 +41,14 @@ func NextArtifactID() ArtifactID {
 	return id
 }
 
+// ---------------------------------------- Step ----------------------------------------
+
 type Step interface {
 	Perform() herr.BuildError
 	SimpleDescr() string
 }
+
+// ---------------------------------------- Transform ----------------------------------------
 
 type Transform interface {
 	TransformDescr() string
@@ -49,11 +57,15 @@ type Transform interface {
 	DumpTransform(level uint) error
 }
 
+// ---------------------------------------- Action ----------------------------------------
+
 type Action interface {
 	SimpleDescr() string
 	Perform(plan *Plan) herr.BuildError
 	ActionArise() *herr.AriseRef
 }
+
+// ---------------------------------------- Goal ----------------------------------------
 
 type Goal struct {
 	Name string
@@ -73,6 +85,8 @@ func (goal *Goal) Actions() []Action {
 func (goal *Goal) ActionCount() int {
 	return len(goal.actions)
 }
+
+// ---------------------------------------- Plan ----------------------------------------
 
 type Plan struct {
 	steps []Step

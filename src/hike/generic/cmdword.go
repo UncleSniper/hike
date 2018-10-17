@@ -159,7 +159,7 @@ func (word *BraceCommandWord) DumpCommandWord(level uint) error {
 
 var _ CommandWord = &BraceCommandWord{}
 
-// ---------------------------------------- BraceCommandWord ----------------------------------------
+// ---------------------------------------- misc ----------------------------------------
 
 func DumpCommandWords(words []CommandWord, level uint) error {
 	prn := herr.NewErrorPrinter()

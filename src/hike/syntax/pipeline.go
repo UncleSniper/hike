@@ -24,18 +24,23 @@ func ParsePipelineArtifact(parser *prs.Parser) abs.Artifact {
 	var key, name, base, optdesc string
 	var optkey *loc.Location
 	var optval *string
+	var isPath bool
+	specState := parser.SpecState()
   opts:
 	for parser.Token.Type == tok.T_NAME {
 		switch parser.Token.Text {
 			case "key":
 				optval = &key
 				optdesc = "final group artifact key"
+				isPath = false
 			case "name":
 				optval = &name
 				optdesc = "final group artifact name"
+				isPath = false
 			case "base":
 				optval = &base
 				optdesc = "final group artifact base directory"
+				isPath = true
 			default:
 				break opts
 		}
@@ -46,7 +51,11 @@ func ParsePipelineArtifact(parser *prs.Parser) abs.Artifact {
 			parser.Frame("pipeline", start)
 			return nil
 		}
-		*optval = parser.Token.Text
+		if isPath {
+			*optval = specState.Config.RealPath(parser.Token.Text)
+		} else {
+			*optval = parser.Token.Text
+		}
 		parser.Next()
 	}
 	if !parser.IsArtifactSet() {
@@ -60,7 +69,6 @@ func ParsePipelineArtifact(parser *prs.Parser) abs.Artifact {
 		return nil
 	}
 	var merge bool
-	specState := parser.SpecState()
 	var newTip []abs.Artifact
   steps:
 	for {
@@ -133,7 +141,7 @@ func ParsePipelineArtifact(parser *prs.Parser) abs.Artifact {
 			uiname = con.GuessGroupArtifactName(allPaths, specState.Config.TopDir)
 	}
 	gkey := abs.ArtifactKey {
-		Project: specState.Config.ProjectName,
+		Project: specState.Config.EffectiveProjectName(),
 		Artifact: kname,
 	}
 	arise := &herr.AriseRef {

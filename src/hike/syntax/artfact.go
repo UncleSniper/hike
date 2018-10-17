@@ -20,9 +20,10 @@ func ParseStaticFile(parser *prs.Parser) *hlm.StaticFileFactory {
 		Text: "static file artifact factory",
 		Location: start,
 	}
+	specState := parser.SpecState()
 	switch parser.Token.Type {
 		case tok.T_STRING:
-			path := parser.Token.Text
+			path := specState.Config.RealPath(parser.Token.Text)
 			parser.Next()
 			return hlm.NewStaticFileFactory(path, "", "", "", nil, arise)
 		case tok.T_LBRACE:
@@ -31,22 +32,26 @@ func ParseStaticFile(parser *prs.Parser) *hlm.StaticFileFactory {
 				parser.Frame("static file artifact factory", start)
 				return nil
 			}
-			path := parser.Token.Text
+			path := specState.Config.RealPath(parser.Token.Text)
 			parser.Next()
 			var key, name, base, optdesc string
 			var optval *string
+			var isPath bool
 		  opts:
 			for parser.Token.Type == tok.T_NAME {
 				switch parser.Token.Text {
 					case "key":
 						optval = &key
 						optdesc = "artifact key"
+						isPath = false
 					case "name":
 						optval = &name
 						optdesc = "artifact name"
+						isPath = false
 					case "base":
 						optval = &base
 						optdesc = "artifact base directory"
+						isPath = true
 					default:
 						break opts
 				}
@@ -57,7 +62,11 @@ func ParseStaticFile(parser *prs.Parser) *hlm.StaticFileFactory {
 					parser.Frame("static file artifact factory", start)
 					return nil
 				}
-				*optval = parser.Token.Text
+				if isPath {
+					*optval = specState.Config.RealPath(parser.Token.Text)
+				} else {
+					*optval = parser.Token.Text
+				}
 				parser.Next()
 			}
 			var generatingTransform hlv.TransformFactory
@@ -121,6 +130,7 @@ func ParseRegexFile(parser *prs.Parser) *hlm.RegexFileFactory {
 		Text: "regex file artifact factory",
 		Location: start,
 	}
+	specState := parser.SpecState()
 	switch parser.Token.Type {
 		case tok.T_STRING:
 			pathRegex := manglePathRegex(parser)
@@ -148,24 +158,30 @@ func ParseRegexFile(parser *prs.Parser) *hlm.RegexFileFactory {
 			parser.Next()
 			var key, name, base, rebaseFrom, rebaseTo, optdesc string
 			var optval *string
+			var isPath bool
 		  opts:
 			for parser.Token.Type == tok.T_NAME {
 				switch parser.Token.Text {
 					case "key":
 						optval = &key
 						optdesc = "artifact key"
+						isPath = false
 					case "name":
 						optval = &name
 						optdesc = "artifact name"
+						isPath = false
 					case "base":
 						optval = &base
 						optdesc = "artifact base directory"
+						isPath = true
 					case "rebaseFrom":
 						optval = &rebaseFrom
 						optdesc = "artifact rebase source directory"
+						isPath = true
 					case "rebaseTo":
 						optval = &rebaseTo
 						optdesc = "artifact rebase destination directory"
+						isPath = true
 					default:
 						break opts
 				}
@@ -176,7 +192,11 @@ func ParseRegexFile(parser *prs.Parser) *hlm.RegexFileFactory {
 					parser.Frame("regexp file artifact factory", start)
 					return nil
 				}
-				*optval = parser.Token.Text
+				if isPath {
+					*optval = specState.Config.RealPath(parser.Token.Text)
+				} else {
+					*optval = parser.Token.Text
+				}
 				parser.Next()
 			}
 			var generatingTransform hlv.TransformFactory

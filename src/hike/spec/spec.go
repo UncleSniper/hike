@@ -1,10 +1,13 @@
 package spec
 
 import (
+	"path/filepath"
 	herr "hike/error"
 	abs "hike/abstract"
 	loc "hike/location"
 )
+
+// ---------------------------------------- BuildError ----------------------------------------
 
 type DuplicateGoalError struct {
 	herr.BuildErrorBase
@@ -124,6 +127,8 @@ func (no *NoSuchArtifactError) BuildErrorLocation() *loc.Location {
 
 var _ herr.BuildError = &NoSuchArtifactError{}
 
+// ---------------------------------------- State ----------------------------------------
+
 type PendingResolver func() herr.BuildError
 
 type State struct {
@@ -221,19 +226,26 @@ func (state *State) Compile() (err herr.BuildError) {
 	return
 }
 
+// ---------------------------------------- Config ----------------------------------------
+
 type Config struct {
 	ProjectName string
-	InducedProjectName string
 	TopDir string
 }
 
 func (config *Config) EffectiveProjectName() string {
-	switch {
-		case len(config.InducedProjectName) > 0:
-			return config.InducedProjectName
-		case len(config.ProjectName) > 0:
-			return config.ProjectName
-		default:
-			return "this"
+	if len(config.ProjectName) > 0 {
+		return config.ProjectName
+	} else {
+		return "this"
+	}
+}
+
+func (config *Config) RealPath(path string) string {
+	path = filepath.FromSlash(path)
+	if filepath.IsAbs(path) {
+		return filepath.Clean(path)
+	} else {
+		return filepath.Join(config.TopDir, path)
 	}
 }

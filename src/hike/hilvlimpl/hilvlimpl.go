@@ -112,7 +112,7 @@ func (factory *StaticFileFactory) NewArtifact(
 			kname = con.GuessFileArtifactName(factory.Path, state.Config.TopDir)
 	}
 	key := abs.ArtifactKey {
-		Project: state.Config.ProjectName,
+		Project: state.Config.EffectiveProjectName(),
 		Artifact: kname,
 	}
 	var uiname string
@@ -202,6 +202,7 @@ func (factory *RegexFileFactory) NewArtifact(
 		}
 		for _, path := range paths {
 			newPath := factory.PathRegex.ReplaceAllString(path, factory.PathReplacement)
+			newPath = state.Config.RealPath(newPath)
 			if shouldRebase {
 				newPath = con.RebasePath(newPath, factory.RebaseFrom, factory.RebaseTo)
 			}
@@ -211,7 +212,7 @@ func (factory *RegexFileFactory) NewArtifact(
 				kname = con.GuessFileArtifactName(newPath, state.Config.TopDir)
 			}
 			key := abs.ArtifactKey {
-				Project: state.Config.ProjectName,
+				Project: state.Config.EffectiveProjectName(),
 				Artifact: kname,
 			}
 			file := con.NewFile(key, kname, factory.Arise, newPath, generatingTransform)
@@ -235,7 +236,7 @@ func (factory *RegexFileFactory) NewArtifact(
 				kname = con.GuessGroupArtifactName(allPaths, state.Config.TopDir)
 		}
 		key := abs.ArtifactKey {
-			Project: state.Config.ProjectName,
+			Project: state.Config.EffectiveProjectName(),
 			Artifact: kname,
 		}
 		switch {
