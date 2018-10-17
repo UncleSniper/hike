@@ -5,8 +5,11 @@ goal			::= 'goal' NAME (action | '{' goal_body '}')
 goal_body		::= ('label' STRING)? action+
 
 action			::= attain
+					| require
+					| delete
 attain			::= 'attain' NAME
 require			::= 'require' artifact_ref
+delete			::= 'delete' (STRING | x_artifact_ref)
 
 artifact_ref	::= STRING | artifact
 x_artifact_ref	::= 'artifact' STRING | artifact
