@@ -688,3 +688,19 @@ func PrintErrorString(printer *herr.ErrorPrinter, str string) {
 		printer.Fail(err)
 	}
 }
+
+func MakeEnclosingDirectories(childPath string, arise *herr.AriseRef) herr.BuildError {
+	path := filepath.Dir(childPath)
+	if path == "" || path == sepString {
+		return nil
+	}
+	nerr := os.MkdirAll(path, 0755)
+	if nerr == nil {
+		return nil
+	}
+	return &CannotCreateDirectoryError {
+		Path: path,
+		OSError: nerr,
+		OperationArise: arise,
+	}
+}

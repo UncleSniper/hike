@@ -101,7 +101,14 @@ type CommandStep struct {
 }
 
 func (step *CommandStep) Perform() herr.BuildError {
-	argvs := step.CommandLine(PathsOfArtifacts(step.Sources), step.Destination.PathNames(nil))
+	destPaths := step.Destination.PathNames(nil)
+	for _, destDir := range destPaths {
+		err := con.MakeEnclosingDirectories(destDir, step.CommandArise)
+		if err != nil {
+			return err
+		}
+	}
+	argvs := step.CommandLine(PathsOfArtifacts(step.Sources), destPaths)
 	for _, argv := range argvs {
 		if len(argv) == 0 {
 			continue
