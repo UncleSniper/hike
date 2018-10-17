@@ -80,6 +80,7 @@ type TransformParser func(parser *Parser) abs.Transform
 type TransformFactoryParser func(parser *Parser) hlv.TransformFactory
 type ArtifactFactoryParser func(parser *Parser) hlv.ArtifactFactory
 type ArtifactSetParser func(parser *Parser) []abs.Artifact
+type FileFilterParser func(parser *Parser) hlv.FileFilter
 
 type KnownStructures struct {
 	top map[string]TopParser
@@ -89,6 +90,7 @@ type KnownStructures struct {
 	transformFactory map[string]TransformFactoryParser
 	artifactFactory map[string]ArtifactFactoryParser
 	artifactSet map[string]ArtifactSetParser
+	fileFilter map[string]FileFilterParser
 }
 
 func NewKnownStructures() *KnownStructures {
@@ -100,6 +102,7 @@ func NewKnownStructures() *KnownStructures {
 		transformFactory: make(map[string]TransformFactoryParser),
 		artifactFactory: make(map[string]ArtifactFactoryParser),
 		artifactSet: make(map[string]ArtifactSetParser),
+		fileFilter: make(map[string]FileFilterParser),
 	}
 }
 
@@ -157,6 +160,14 @@ func (known *KnownStructures) RegisterArtifactSetParser(initiator string, parser
 
 func (known *KnownStructures) ArtifactSetParser(initiator string) ArtifactSetParser {
 	return known.artifactSet[initiator]
+}
+
+func (known *KnownStructures) RegisterFileFilterParser(initiator string, parser FileFilterParser) {
+	known.fileFilter[initiator] = parser
+}
+
+func (known *KnownStructures) FileFilterParser(initiator string) FileFilterParser {
+	return known.fileFilter[initiator]
 }
 
 func New(
@@ -384,6 +395,23 @@ func (parser *Parser) IsArtifactSet() bool {
 		default:
 			return false
 	}
+}
+
+func (parser *Parser) FileFilter() hlv.FileFilter {
+	if !parser.Expect(tok.T_NAME) {
+		return nil
+	}
+	cb := parser.knownStructures.FileFilterParser(parser.Token.Text)
+	if cb == nil {
+		parser.Die("file filter")
+		return nil
+	} else {
+		return cb(parser)
+	}
+}
+
+func (parser *Parser) IsFileFilter() bool {
+	return parser.Token.Type == tok.T_NAME && parser.knownStructures.FileFilterParser(parser.Token.Text) != nil
 }
 
 // ---------------------------------------- intrinsics ----------------------------------------
