@@ -13,6 +13,7 @@ x_artifact_ref	::= 'artifact' STRING | artifact
 artifact		::= file_artifact
 					| group_artifact
 					| pipeline
+					| tree_artifact
 file_artifact	::= 'file' STRING (STRING | '{' file_body '}')
 file_body		::= STRING ('name' STRING)? transform?
 group_artifact	::= 'artifacts' STRING '{' group_body '}'
@@ -21,6 +22,10 @@ pipeline		::= 'pipeline' '{' pipeline_opt* artifact_set ('merge'? artifact_fact)
 pipeline_opt	::= 'key' STRING
 					| 'name' STRING
 					| 'base' STRING
+tree_artifact	::= 'tree' STRING (STRING | '{' tree_body '}')
+tree_body		::= STRING tree_opt* file_filter*
+tree_opt		::= 'name' STRING
+					| 'noCache'
 
 transform		::= exec_transform
 exec_transform	::= 'exec' STRING '{' command_word+ exec_option* x_artifact_ref* '}'
@@ -33,7 +38,16 @@ exec_option		::= 'loud'
 
 artifact_set	::= artifact
 					| artifact_each
+					| scandir
 artifact_each	::= 'each' '{' artifact_set* '}'
+scandir			::= 'scandir' (STRING | '{' scandir_bdy '}')
+scandir_bdy		::= STRING scandir_opt* file_filter*
+scandir_opt		::= 'key' STRING
+					| 'name' STRING
+					| 'base' STRING
+file_filter		::= 'files'
+					| 'directories'
+					| 'wildcard' STRING
 
 artifact_fact	::= static_file
 					| regex_file

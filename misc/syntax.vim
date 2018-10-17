@@ -1,6 +1,7 @@
-syn keyword hikeInitiator goal artifact file artifacts pipeline exec each regex
-syn keyword hikeOption label name key base loud suffixIsDestination rebaseFrom rebaseTo
+syn keyword hikeInitiator goal artifact file artifacts pipeline exec each regex scandir tree
+syn keyword hikeOption label name key base loud suffixIsDestination rebaseFrom rebaseTo noCache
 syn keyword hikeModifier merge
+syn keyword hikeFilter files directories wildcard
 syn keyword hikePlaceholder source dest
 syn keyword hikeAction attain require
 
@@ -14,6 +15,7 @@ syn match hikeBadEscape /\\[^rntbafve\\"xuU]/ contained
 hi link hikeInitiator Type
 hi link hikeOption PreProc
 hi link hikeModifier PreProc
+hi link hikeFilter hikeModifier
 hi link hikePlaceholder PreProc
 hi link hikeAction Keyword
 
