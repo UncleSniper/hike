@@ -126,6 +126,48 @@ func (step *CommandStep) Perform() herr.BuildError {
 
 var _ abs.Step = &CommandStep{}
 
+type DeletePathStep struct {
+	con.StepBase
+	Path string
+	DeleteArise *herr.AriseRef
+}
+
+func (step *DeletePathStep) Perform() herr.BuildError {
+	nerr := os.RemoveAll(step.Path)
+	if nerr == nil {
+		return nil
+	}
+	return &con.CannotDeleteFileError {
+		Path: step.Path,
+		OSError: nerr,
+		OperationArise: step.DeleteArise,
+	}
+}
+
+var _ abs.Step = &DeletePathStep{}
+
+type DeleteArtifactStep struct {
+	con.StepBase
+	Artifact abs.Artifact
+	DeleteArise *herr.AriseRef
+}
+
+func (step *DeleteArtifactStep) Perform() herr.BuildError {
+	for _, path := range step.Artifact.PathNames(nil) {
+		nerr := os.RemoveAll(path)
+		if nerr != nil {
+			return &con.CannotDeleteFileError {
+				Path: path,
+				OSError: nerr,
+				OperationArise: step.DeleteArise,
+			}
+		}
+	}
+	return nil
+}
+
+var _ abs.Step = &DeleteArtifactStep{}
+
 // ---------------------------------------- Transform ----------------------------------------
 
 type CommandTransformBase struct {
@@ -298,3 +340,49 @@ func NewMultiCommandTransform(
 	transform.SuffixIsDestination = suffixIsDestination
 	return transform
 }
+
+// ---------------------------------------- Action ----------------------------------------
+
+type DeletePathAction struct {
+	con.ActionBase
+	Path string
+	Base string
+}
+
+func (action *DeletePathAction) SimpleDescr() string {
+	return "delete " + con.GuessFileArtifactName(action.Path, action.Base)
+}
+
+func (action *DeletePathAction) Perform(plan *abs.Plan) herr.BuildError {
+	step := &DeletePathStep {
+		Path: action.Path,
+		DeleteArise: action.Arise,
+	}
+	step.Description = "delete " + con.GuessFileArtifactName(action.Path, action.Base)
+	plan.AddStep(step)
+	return nil
+}
+
+var _ abs.Action = &DeletePathAction{}
+
+type DeleteArtifactAction struct {
+	con.ActionBase
+	Artifact abs.Artifact
+	Base string
+}
+
+func (action *DeleteArtifactAction) SimpleDescr() string {
+	return "delete " + action.Artifact.DisplayName()
+}
+
+func (action *DeleteArtifactAction) Perform(plan *abs.Plan) herr.BuildError {
+	step := &DeleteArtifactStep {
+		Artifact: action.Artifact,
+		DeleteArise: action.Arise,
+	}
+	step.Description = "delete " + action.Artifact.DisplayName()
+	plan.AddStep(step)
+	return nil
+}
+
+var _ abs.Action = &DeleteArtifactAction{}

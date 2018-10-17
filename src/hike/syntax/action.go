@@ -5,6 +5,7 @@ import (
 	spc "hike/spec"
 	tok "hike/token"
 	prs "hike/parser"
+	gen "hike/generic"
 	abs "hike/abstract"
 	con "hike/concrete"
 )
@@ -85,5 +86,47 @@ func TopRequireAction(parser *prs.Parser) abs.Action {
 		return action
 	} else {
 		return nil
+	}
+}
+
+func ParseDeleteAction(parser *prs.Parser) abs.Action {
+	if !parser.ExpectKeyword("delete") {
+		return nil
+	}
+	start := &parser.Token.Location
+	parser.Next()
+	arise := &herr.AriseRef {
+		Text: "'delete' action",
+		Location: start,
+	}
+	config := parser.SpecState().Config
+	switch {
+		case parser.Token.Type == tok.T_STRING:
+			path := config.RealPath(parser.Token.Text)
+			parser.Next()
+			action := &gen.DeletePathAction {
+				Path: path,
+				Base: config.TopDir,
+			}
+			action.Arise = arise
+			return action
+		case parser.IsArtifactRef(true):
+			ref := parser.ArtifactRef(arise, true)
+			if ref == nil {
+				parser.Frame("'delete' action", start)
+				return nil
+			}
+			action := &gen.DeleteArtifactAction {
+				Base: config.TopDir,
+			}
+			action.Arise = arise
+			ref.InjectArtifact(parser.SpecState(), func(artifact abs.Artifact) {
+				action.Artifact = artifact
+			})
+			return action
+		default:
+			parser.Die("string (pathname) or artifact reference")
+			parser.Frame("'delete' action", start)
+			return nil
 	}
 }
