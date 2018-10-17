@@ -179,8 +179,8 @@ func (artifact *FileArtifact) DisplayName() string {
 	}
 }
 
-func (artifact *FileArtifact) PathNames(sink []string) []string {
-	return append(sink, artifact.Path)
+func (artifact *FileArtifact) PathNames(sink []string) ([]string, herr.BuildError) {
+	return append(sink, artifact.Path), nil
 }
 
 func (artifact *FileArtifact) ModTime(arise *herr.AriseRef) (stamp time.Time, err herr.BuildError, missing bool) {
@@ -315,11 +315,15 @@ func (artifact *GroupArtifact) DisplayName() string {
 	return artifact.Name
 }
 
-func (artifact *GroupArtifact) PathNames(sink []string) []string {
+func (artifact *GroupArtifact) PathNames(sink []string) ([]string, herr.BuildError) {
+	var err herr.BuildError
 	for _, child := range artifact.children {
-		sink = child.PathNames(sink)
+		sink, err = child.PathNames(sink)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return sink
+	return sink, nil
 }
 
 func (artifact *GroupArtifact) EarliestModTime(arise *herr.AriseRef) (

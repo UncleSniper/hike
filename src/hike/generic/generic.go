@@ -14,12 +14,16 @@ import (
 
 // ---------------------------------------- Artifact ----------------------------------------
 
-func PathsOfArtifacts(artifacts []abs.Artifact) []string {
+func PathsOfArtifacts(artifacts []abs.Artifact) ([]string, herr.BuildError) {
 	var all []string
+	var err herr.BuildError
 	for _, artifact := range artifacts {
-		all = artifact.PathNames(all)
+		all, err = artifact.PathNames(all)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return all
+	return all, nil
 }
 
 // ---------------------------------------- BuildError ----------------------------------------
@@ -101,14 +105,21 @@ type CommandStep struct {
 }
 
 func (step *CommandStep) Perform() herr.BuildError {
-	destPaths := step.Destination.PathNames(nil)
+	destPaths, err := step.Destination.PathNames(nil)
+	if err != nil {
+		return err
+	}
 	for _, destDir := range destPaths {
-		err := con.MakeEnclosingDirectories(destDir, step.CommandArise)
+		err = con.MakeEnclosingDirectories(destDir, step.CommandArise)
 		if err != nil {
 			return err
 		}
 	}
-	argvs := step.CommandLine(PathsOfArtifacts(step.Sources), destPaths)
+	srcPaths, err := PathsOfArtifacts(step.Sources)
+	if err != nil {
+		return err
+	}
+	argvs := step.CommandLine(srcPaths, destPaths)
 	for _, argv := range argvs {
 		if len(argv) == 0 {
 			continue
@@ -160,7 +171,11 @@ type DeleteArtifactStep struct {
 }
 
 func (step *DeleteArtifactStep) Perform() herr.BuildError {
-	for _, path := range step.Artifact.PathNames(nil) {
+	paths, err := step.Artifact.PathNames(nil)
+	if err != nil {
+		return err
+	}
+	for _, path := range paths {
 		nerr := os.RemoveAll(path)
 		if nerr != nil {
 			return &con.CannotDeleteFileError {

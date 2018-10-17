@@ -25,7 +25,7 @@ type Artifact interface {
 	ArtifactID() ArtifactID
 	DisplayName() string
 	ArtifactArise() *herr.AriseRef
-	PathNames(sink []string) []string
+	PathNames(sink []string) ([]string, herr.BuildError)
 	EarliestModTime(arise *herr.AriseRef) (time.Time, herr.BuildError, bool)
 	LatestModTime(arise *herr.AriseRef) (time.Time, herr.BuildError, bool)
 	Flatten() herr.BuildError

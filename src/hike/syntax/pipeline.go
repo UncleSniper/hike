@@ -120,8 +120,14 @@ func ParsePipelineArtifact(parser *prs.Parser) abs.Artifact {
 		return tip[0]
 	}
 	var allPaths []string
+	var err herr.BuildError
 	for _, one := range tip {
-		allPaths = one.PathNames(allPaths)
+		allPaths, err = one.PathNames(allPaths)
+		if err != nil {
+			parser.Fail(err)
+			parser.Frame("pipeline", start)
+			return nil
+		}
 	}
 	var kname, uiname string
 	switch {
@@ -152,9 +158,9 @@ func ParsePipelineArtifact(parser *prs.Parser) abs.Artifact {
 	for _, one := range tip {
 		group.AddChild(one)
 	}
-	err := specState.RegisterArtifact(group, arise)
-	if err != nil {
-		parser.Fail(err)
+	dup := specState.RegisterArtifact(group, arise)
+	if dup != nil {
+		parser.Fail(dup)
 		parser.Frame("pipeline", start)
 		return nil
 	}

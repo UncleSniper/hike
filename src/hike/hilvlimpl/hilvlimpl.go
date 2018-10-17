@@ -187,13 +187,19 @@ func (factory *RegexFileFactory) NewArtifact(
 	state *spc.State,
 ) (finalFile abs.Artifact, err herr.BuildError) {
 	var files []abs.Artifact
-	var allPaths []string
+	var allPaths, paths []string
 	var kname, uiname string
 	var generatingTransform abs.Transform
 	shouldRebase := len(factory.RebaseFrom) > 0 || len(factory.RebaseTo) > 0
 	for _, oldArtifact := range oldArtifacts {
-		allPaths = oldArtifact.PathNames(allPaths)
-		paths := oldArtifact.PathNames(nil)
+		allPaths, err = oldArtifact.PathNames(allPaths)
+		if err != nil {
+			return
+		}
+		paths, err = oldArtifact.PathNames(nil)
+		if err != nil {
+			return
+		}
 		if factory.GeneratingTransform != nil {
 			generatingTransform, err = factory.GeneratingTransform.NewTransform([]abs.Artifact{oldArtifact}, state)
 			if err != nil {
