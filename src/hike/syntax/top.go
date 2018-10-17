@@ -53,6 +53,7 @@ func ParseGoal(parser *prs.Parser) *abs.Goal {
 				parser.Next()
 				haveLabel = true
 			}
+		  actions:
 			for {
 				switch {
 					case parser.IsAction():
@@ -73,7 +74,7 @@ func ParseGoal(parser *prs.Parser) *abs.Goal {
 							return nil
 						}
 						parser.Next()
-						break
+						break actions
 					default:
 						if haveLabel {
 							if goal.ActionCount() > 0 {
