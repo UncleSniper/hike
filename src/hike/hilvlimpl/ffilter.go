@@ -26,6 +26,7 @@ func (filter *FileTypeFilter) AcceptFile(fullPath string, baseDir string, info o
 
 func (filter *FileTypeFilter) DumpFilter(level uint) error {
 	prn := herr.NewErrorPrinter()
+	prn.Out = os.Stdout
 	if filter.IsDir {
 		prn.Print("directories")
 	} else {
@@ -55,6 +56,7 @@ func (filter *WildcardFileFilter) AcceptFile(fullPath string, baseDir string, in
 
 func (filter *WildcardFileFilter) DumpFilter(level uint) error {
 	prn := herr.NewErrorPrinter()
+	prn.Out = os.Stdout
 	prn.Print("wildcard ")
 	con.PrintErrorString(prn, filter.Pattern)
 	return prn.Done()

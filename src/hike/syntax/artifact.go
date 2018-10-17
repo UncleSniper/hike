@@ -285,3 +285,53 @@ func TopTreeArtifact(parser *prs.Parser) abs.Artifact {
 		return nil
 	}
 }
+
+func ParseSplitArtifact(parser *prs.Parser) *hlm.SplitArtifact {
+	if !parser.ExpectKeyword("split") {
+		return nil
+	}
+	start := &parser.Token.Location
+	parser.Next()
+	if !parser.Expect(tok.T_LBRACE) {
+		parser.Frame("split artifact", start)
+		return nil
+	}
+	parser.Next()
+	arise := &herr.AriseRef {
+		Text: "'split' stanza",
+		Location: start,
+	}
+	startRef := parser.ArtifactRef(arise, false)
+	if startRef == nil {
+		parser.Frame("split artifact", start)
+		return nil
+	}
+	endRef := parser.ArtifactRef(arise, false)
+	if endRef == nil {
+		parser.Frame("split artifact", start)
+		return nil
+	}
+	if !parser.Expect(tok.T_RBRACE) {
+		parser.Frame("split artifact", start)
+		return nil
+	}
+	parser.Next()
+	split := hlm.NewSplitArtifact(nil, nil, arise)
+	specState := parser.SpecState()
+	startRef.InjectArtifact(specState, func(artifact abs.Artifact) {
+		split.StartChild = artifact
+	})
+	endRef.InjectArtifact(specState, func(artifact abs.Artifact) {
+		split.EndChild = artifact
+	})
+	return split
+}
+
+func TopSplitArtifact(parser *prs.Parser) abs.Artifact {
+	artifact := ParseSplitArtifact(parser)
+	if artifact != nil {
+		return artifact
+	} else {
+		return nil
+	}
+}

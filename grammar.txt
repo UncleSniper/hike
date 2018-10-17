@@ -17,6 +17,7 @@ artifact		::= file_artifact
 					| group_artifact
 					| pipeline
 					| tree_artifact
+					| split_artifact
 file_artifact	::= 'file' STRING (STRING | '{' file_body '}')
 file_body		::= STRING ('name' STRING)? transform?
 group_artifact	::= 'artifacts' STRING '{' group_body '}'
@@ -29,6 +30,7 @@ tree_artifact	::= 'tree' STRING (STRING | '{' tree_body '}')
 tree_body		::= STRING tree_opt* file_filter*
 tree_opt		::= 'name' STRING
 					| 'noCache'
+split_artifact	::= 'split' '{' artifact_ref artifact_ref '}'
 
 transform		::= exec_transform
 exec_transform	::= 'exec' STRING '{' command_word+ exec_option* x_artifact_ref* '}'

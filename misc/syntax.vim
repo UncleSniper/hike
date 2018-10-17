@@ -1,5 +1,5 @@
 syn keyword hikeInitiator goal artifact file artifacts pipeline exec each regex scandir tree
-syn keyword hikeInitiator delete
+syn keyword hikeInitiator delete split
 syn keyword hikeOption label name key base loud suffixIsDestination rebaseFrom rebaseTo noCache
 syn keyword hikeModifier merge
 syn keyword hikeFilter files directories wildcard
