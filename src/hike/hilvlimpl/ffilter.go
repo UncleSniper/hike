@@ -38,7 +38,7 @@ func NewWildcardFileFilter(pattern string) *WildcardFileFilter {
 
 func (filter *WildcardFileFilter) AcceptFile(fullPath string, baseDir string, info os.FileInfo) bool {
 	matched, err := filepath.Match(filter.Pattern, info.Name())
-	return err != nil && matched
+	return err == nil && matched
 }
 
 var _ hlv.FileFilter = &WildcardFileFilter{}

@@ -136,7 +136,8 @@ func doArtifactScanDir(
 	baseDir string,
 	filters []hlv.FileFilter,
 ) []abs.Artifact {
-	config := parser.SpecState().Config
+	specState := parser.SpecState()
+	config := specState.Config
 	baseDir = config.RealPath(baseDir)
 	arise := &herr.AriseRef {
 		Text: "'scandir' artifact set",
@@ -156,6 +157,11 @@ func doArtifactScanDir(
 			Artifact: keyPrefix + name,
 		}
 		artifact := con.NewFile(key, namePrefix + name, arise, fullPath, nil)
+		dup := specState.RegisterArtifact(artifact, arise)
+		if dup != nil {
+			parser.Fail(dup)
+			return nil
+		}
 		artifacts = append(artifacts, artifact)
 		return nil
 	})
