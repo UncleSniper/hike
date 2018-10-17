@@ -3,7 +3,9 @@ package hilvlimpl
 import (
 	"os"
 	"path/filepath"
+	herr "hike/error"
 	hlv "hike/hilevel"
+	con "hike/concrete"
 )
 
 // ---------------------------------------- FileTypeFilter ----------------------------------------
@@ -20,6 +22,16 @@ func NewFileTypeFilter(isDir bool) *FileTypeFilter {
 
 func (filter *FileTypeFilter) AcceptFile(fullPath string, baseDir string, info os.FileInfo) bool {
 	return info.IsDir() == filter.IsDir
+}
+
+func (filter *FileTypeFilter) DumpFilter(level uint) error {
+	prn := herr.NewErrorPrinter()
+	if filter.IsDir {
+		prn.Print("directories")
+	} else {
+		prn.Print("files")
+	}
+	return prn.Done()
 }
 
 var _ hlv.FileFilter = &FileTypeFilter{}
@@ -39,6 +51,13 @@ func NewWildcardFileFilter(pattern string) *WildcardFileFilter {
 func (filter *WildcardFileFilter) AcceptFile(fullPath string, baseDir string, info os.FileInfo) bool {
 	matched, err := filepath.Match(filter.Pattern, info.Name())
 	return err == nil && matched
+}
+
+func (filter *WildcardFileFilter) DumpFilter(level uint) error {
+	prn := herr.NewErrorPrinter()
+	prn.Print("wildcard ")
+	con.PrintErrorString(prn, filter.Pattern)
+	return prn.Done()
 }
 
 var _ hlv.FileFilter = &WildcardFileFilter{}

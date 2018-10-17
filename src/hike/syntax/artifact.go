@@ -4,8 +4,10 @@ import (
 	herr "hike/error"
 	tok "hike/token"
 	prs "hike/parser"
+	hlv "hike/hilevel"
 	abs "hike/abstract"
 	con "hike/concrete"
+	hlm "hike/hilvlimpl"
 )
 
 func ParseFileArtifact(parser *prs.Parser) *con.FileArtifact {
@@ -48,8 +50,13 @@ func ParseFileArtifact(parser *prs.Parser) *con.FileArtifact {
 			name := ""
 			haveName := false
 			if parser.IsKeyword("name") {
+				location := &parser.Token.Location
 				parser.Next()
-				parser.ExpectExp(tok.T_STRING, "artifact name")
+				if !parser.ExpectExp(tok.T_STRING, "artifact name") {
+					parser.Frame("file artifact 'name' option", location)
+					parser.Frame("file artifact", start)
+					return nil
+				}
 				name = parser.Token.Text
 				parser.Next()
 				haveName = true
@@ -172,6 +179,106 @@ func ParseGroupArtifact(parser *prs.Parser) *con.GroupArtifact {
 
 func TopGroupArtifact(parser *prs.Parser) abs.Artifact {
 	artifact := ParseGroupArtifact(parser)
+	if artifact != nil {
+		return artifact
+	} else {
+		return nil
+	}
+}
+
+func ParseTreeArtifact(parser *prs.Parser) *hlm.TreeArtifact {
+	if !parser.ExpectKeyword("tree") {
+		return nil
+	}
+	start := &parser.Token.Location
+	parser.Next()
+	if !parser.ExpectExp(tok.T_STRING, "artifact key") {
+		parser.Frame("group artifact", start)
+		return nil
+	}
+	specState := parser.SpecState()
+	key := prs.SplitArtifactKey(parser.Token.Text, specState.Config)
+	parser.Next()
+	arise := &herr.AriseRef {
+		Text: "'tree' stanza",
+		Location: start,
+	}
+	switch parser.Token.Type {
+		case tok.T_STRING:
+			root := specState.Config.RealPath(parser.Token.Text)
+			parser.Next()
+			return hlm.NewTreeArtifact(
+				*key,
+				con.GuessFileArtifactName(root, specState.Config.TopDir),
+				arise,
+				root,
+				nil,
+				false,
+			)
+		case tok.T_LBRACE:
+			parser.Next()
+			if !parser.ExpectExp(tok.T_STRING, "root directory path") {
+				parser.Frame("tree artifact", start)
+				return nil
+			}
+			root := specState.Config.RealPath(parser.Token.Text)
+			parser.Next()
+			name := ""
+			haveName := false
+			var noCache bool
+		  opts:
+			for parser.Token.Type == tok.T_NAME {
+				switch parser.Token.Text {
+					case "name":
+						location := &parser.Token.Location
+						parser.Next()
+						if !parser.ExpectExp(tok.T_STRING, "artifact name") {
+							parser.Frame("tree artifact 'name' option", location)
+							parser.Frame("tree artifact", start)
+							return nil
+						}
+						name = parser.Token.Text
+						parser.Next()
+						haveName = true
+					case "noCache":
+						noCache = true
+						parser.Next()
+					default:
+						break opts
+				}
+			}
+			if !haveName {
+				name = con.GuessFileArtifactName(root, specState.Config.TopDir)
+			}
+			var filters []hlv.FileFilter
+			for parser.IsFileFilter() {
+				filter := parser.FileFilter()
+				if filter == nil {
+					parser.Frame("tree artifact", start)
+					return nil
+				}
+				filters = append(filters, filter)
+			}
+			if parser.Token.Type != tok.T_RBRACE {
+				if len(filters) > 0 {
+					parser.Die("file filter or '}'")
+				} else {
+					parser.Die("tree artifact option, file filter or '}'")
+				}
+				parser.Frame("tree artifact", start)
+				return nil
+			}
+			parser.Next()
+			return hlm.NewTreeArtifact(*key, name, arise, root, filters, noCache)
+		default:
+			parser.Die("string (root directory path) or '{'")
+			parser.Frame("tree artifact", start)
+			return nil
+	}
+}
+
+func TopTreeArtifact(parser *prs.Parser) abs.Artifact {
+	artifact := ParseTreeArtifact(parser)
 	if artifact != nil {
 		return artifact
 	} else {

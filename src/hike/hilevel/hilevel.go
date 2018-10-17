@@ -18,4 +18,5 @@ type ArtifactFactory interface {
 
 type FileFilter interface {
 	AcceptFile(fullPath string, baseDir string, info os.FileInfo) bool
+	DumpFilter(level uint) error
 }

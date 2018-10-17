@@ -26,6 +26,30 @@ type TreeArtifact struct {
 	latestModTime time.Time
 }
 
+func NewTreeArtifact(
+	key abs.ArtifactKey,
+	name string,
+	arise *herr.AriseRef,
+	root string,
+	filters []hlv.FileFilter,
+	noCache bool,
+) *TreeArtifact {
+	artifact := &TreeArtifact {
+		Root: root,
+		Filters: filters,
+	}
+	artifact.Key = key
+	artifact.ID = abs.NextArtifactID()
+	artifact.Name = name
+	artifact.Arise = arise
+	if noCache {
+		artifact.cacheState = TreeArtifactDontCache
+	} else {
+		artifact.cacheState = TreeArtifactCachePending
+	}
+	return artifact
+}
+
 func (artifact *TreeArtifact) DisplayName() string {
 	if len(artifact.Name) > 0 {
 		return artifact.Name
@@ -124,12 +148,11 @@ func (artifact *TreeArtifact) DumpArtifact(level uint) error {
 		prn.Indent(1)
 		prn.Println("noCache")
 	}
-	/*TODO
 	for _, filter := range artifact.Filters {
 		prn.Indent(1)
+		prn.Fail(filter.DumpFilter(level + 1))
+		prn.Println()
 	}
-	*/
-	///
 	prn.Indent(0)
 	prn.Print("}")
 	return prn.Done()
