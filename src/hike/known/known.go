@@ -8,6 +8,8 @@ import (
 func RegisterCoreStructures(known *prs.KnownStructures) {
 	known.RegisterTopParser("goal", syn.TopGoal)
 	known.RegisterTopParser("artifact", syn.ToplevelArtifact)
+	known.RegisterTopParser("set", syn.TopSetVar)
+	known.RegisterTopParser("setdef", syn.TopSetVarDef)
 	known.RegisterActionParser("attain", syn.TopAttainAction)
 	known.RegisterActionParser("require", syn.TopRequireAction)
 	known.RegisterActionParser("delete", syn.ParseDeleteAction)

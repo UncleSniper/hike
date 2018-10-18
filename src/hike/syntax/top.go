@@ -111,3 +111,25 @@ func ToplevelArtifact(parser *prs.Parser) {
 		parser.Artifact()
 	}
 }
+
+func ParseSetVar(parser *prs.Parser, isDef bool) {
+	var initiator string
+	if isDef {
+		initiator = "setdef"
+	} else {
+		initiator = "set"
+	}
+	if !parser.ExpectKeyword(initiator) {
+		return
+	}
+	//TODO
+	return
+}
+
+func TopSetVar(parser *prs.Parser) {
+	ParseSetVar(parser, false)
+}
+
+func TopSetVarDef(parser *prs.Parser) {
+	ParseSetVar(parser, true)
+}
