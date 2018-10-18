@@ -116,7 +116,7 @@ func ParsePipelineArtifact(parser *prs.Parser) abs.Artifact {
 			tip = newTip
 		}
 	}
-	if len(tip) == 1 {
+	if len(tip) == 1 && len(key) == 0 {
 		return tip[0]
 	}
 	var allPaths []string

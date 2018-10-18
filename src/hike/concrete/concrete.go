@@ -641,16 +641,16 @@ func GuessGroupArtifactName(paths []string, base string) string {
 	for _, path := range paths {
 		path = filepath.Clean(path)
 		dir := filepath.Dir(path)
-		base := filepath.Base(path)
+		basename := filepath.Base(path)
 		if have {
-			baseRunes := []rune(base)
+			baseRunes := []rune(basename)
 			max := len(suffix) - suffixOffset
 			if len(baseRunes) < max {
 				max = len(baseRunes)
 			}
 			for i := 1; i <= max; i++ {
 				if suffix[len(suffix) - i] != baseRunes[len(baseRunes) - i] {
-					suffixOffset = len(suffix) - i
+					suffixOffset = len(suffix) - i + 1
 					break
 				}
 			}
@@ -659,7 +659,7 @@ func GuessGroupArtifactName(paths []string, base string) string {
 			}
 		} else {
 			have = true
-			suffix = []rune(base)
+			suffix = []rune(basename)
 			prefix = dir
 		}
 	}
