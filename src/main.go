@@ -69,6 +69,7 @@ func main() {
 	//TODO: search upward
 	knownStructures := prs.NewKnownStructures()
 	knw.RegisterAllKnownStructures(knownStructures)
+	fullStartTime := time.Now()
 	err := rdr.ReadFile(hikefileName, knownStructures, rootState)
 	if err != nil {
 		die(err)
@@ -118,6 +119,7 @@ func main() {
 	}
 	stepCount := plan.StepCount()
 	stepIndexWidth := numWidth(stepCount)
+	planDuration := time.Since(fullStartTime)
 	startTime := time.Now()
 	for stepIndex, step := range plan.Steps() {
 		fmt.Printf("%*d/%d %s\n", stepIndexWidth, stepIndex + 1, stepCount, step.SimpleDescr())
@@ -133,6 +135,6 @@ func main() {
 		case stepCount == 0:
 			fmt.Println("Nandemonai yo.")
 		case !pretend:
-			fmt.Printf("Success after %s.\n", duration.String())
+			fmt.Printf("Success after %s (+ %s for setup).\n", duration.String(), planDuration.String())
 	}
 }

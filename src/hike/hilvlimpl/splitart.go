@@ -113,7 +113,12 @@ func (split *SplitArtifact) DumpArtifact(level uint) error {
 	prn := herr.NewErrorPrinter()
 	prn.Out = os.Stdout
 	prn.Level(level)
-	prn.Println("split {")
+	prn.Print("split ")
+	if split.OwnKey != nil {
+		con.PrintErrorString(prn, split.OwnKey.Unified())
+		prn.Print(" ")
+	}
+	prn.Println("{")
 	prn.Indent(1)
 	con.PrintErrorString(prn, split.StartChild.ArtifactKey().Unified())
 	prn.Println()

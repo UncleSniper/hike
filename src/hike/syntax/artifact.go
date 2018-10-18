@@ -207,7 +207,7 @@ func ParseTreeArtifact(parser *prs.Parser) *hlm.TreeArtifact {
 		case tok.T_STRING:
 			root := specState.Config.RealPath(parser.Token.Text)
 			parser.Next()
-			return hlm.NewTreeArtifact(
+			tree := hlm.NewTreeArtifact(
 				*key,
 				con.GuessFileArtifactName(root, specState.Config.TopDir),
 				arise,
@@ -215,6 +215,13 @@ func ParseTreeArtifact(parser *prs.Parser) *hlm.TreeArtifact {
 				nil,
 				false,
 			)
+			dup := specState.RegisterArtifact(tree, arise)
+			if dup != nil {
+				parser.Fail(dup)
+				parser.Frame("tree artifact", start)
+				return nil
+			}
+			return tree
 		case tok.T_LBRACE:
 			parser.Next()
 			if !parser.ExpectExp(tok.T_STRING, "root directory path") {
@@ -269,7 +276,14 @@ func ParseTreeArtifact(parser *prs.Parser) *hlm.TreeArtifact {
 				return nil
 			}
 			parser.Next()
-			return hlm.NewTreeArtifact(*key, name, arise, root, filters, noCache)
+			tree := hlm.NewTreeArtifact(*key, name, arise, root, filters, noCache)
+			dup := specState.RegisterArtifact(tree, arise)
+			if dup != nil {
+				parser.Fail(dup)
+				parser.Frame("tree artifact", start)
+				return nil
+			}
+			return tree
 		default:
 			parser.Die("string (root directory path) or '{'")
 			parser.Frame("tree artifact", start)
