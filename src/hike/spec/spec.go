@@ -137,6 +137,8 @@ type State struct {
 	goals map[string]*abs.Goal
 	artifacts map[string]abs.Artifact
 	pendingResolutions []PendingResolver
+	stringVars map[string]string
+	intVars map[string]int
 }
 
 func NewState(config *Config) *State {
@@ -144,6 +146,8 @@ func NewState(config *Config) *State {
 		Config: config,
 		goals: make(map[string]*abs.Goal),
 		artifacts: make(map[string]abs.Artifact),
+		stringVars: make(map[string]string),
+		intVars: make(map[string]int),
 	}
 }
 
@@ -224,6 +228,24 @@ func (state *State) Compile() (err herr.BuildError) {
 		}
 	}
 	return
+}
+
+func (state *State) SetStringVar(key string, value string) {
+	state.stringVars[key] = value
+}
+
+func (state *State) StringVar(key string) (string, bool) {
+	value, exists := state.stringVars[key]
+	return value, exists
+}
+
+func (state *State) SetIntVar(key string, value int) {
+	state.intVars[key] = value
+}
+
+func (state *State) IntVar(key string) (int, bool) {
+	value, exists := state.intVars[key]
+	return value, exists
 }
 
 // ---------------------------------------- Config ----------------------------------------

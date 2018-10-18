@@ -1,8 +1,13 @@
-utterance		::= toplevel
+utterance		::= toplevel*
 toplevel		::= goal
+					| 'artifact' artifact
+					| setvar
+					| setvardef
 
 goal			::= 'goal' NAME (action | '{' goal_body '}')
 goal_body		::= ('label' STRING)? action+
+setvar			::= 'set' NAME (STRING | INT)
+setvardef		::= 'setdef' NAME (STRING | INT)
 
 action			::= attain
 					| require
