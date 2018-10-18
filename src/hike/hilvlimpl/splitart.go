@@ -61,9 +61,19 @@ func (split *SplitArtifact) ArtifactArise() *herr.AriseRef {
 
 func (split *SplitArtifact) PathNames(sink []string) ([]string, herr.BuildError) {
 	if split.Flipped {
-		return split.EndChild.PathNames(sink)
+		if split.EndChild != nil {
+			return split.EndChild.PathNames(sink)
+		}
+		return nil, &con.UnresolvedArtifactPathError {
+			Artifact: split,
+		}
 	} else {
-		return split.StartChild.PathNames(sink)
+		if split.StartChild != nil {
+			return split.StartChild.PathNames(sink)
+		}
+		return nil, &con.UnresolvedArtifactPathError {
+			Artifact: split,
+		}
 	}
 }
 
