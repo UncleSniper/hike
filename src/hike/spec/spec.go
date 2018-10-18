@@ -1,11 +1,19 @@
 package spec
 
 import (
+	"fmt"
+	"regexp"
 	"path/filepath"
 	herr "hike/error"
 	abs "hike/abstract"
 	loc "hike/location"
 )
+
+var stringInterpolRegex *regexp.Regexp
+
+func init() {
+	stringInterpolRegex = regexp.MustCompile("$\\{[^{}]+\\}")
+}
 
 // ---------------------------------------- BuildError ----------------------------------------
 
@@ -142,13 +150,15 @@ type State struct {
 }
 
 func NewState(config *Config) *State {
-	return &State {
+	state := &State {
 		Config: config,
 		goals: make(map[string]*abs.Goal),
 		artifacts: make(map[string]abs.Artifact),
 		stringVars: make(map[string]string),
 		intVars: make(map[string]int),
 	}
+	state.stringVars["$"] = "$"
+	return state
 }
 
 func (state *State) Goal(name string) *abs.Goal {
@@ -258,6 +268,20 @@ func (state *State) SetIntVar(key string, value int, ifNotExists bool) {
 func (state *State) IntVar(key string) (int, bool) {
 	value, exists := state.intVars[key]
 	return value, exists
+}
+
+func (state *State) InterpolateString(src string) string {
+	return stringInterpolRegex.ReplaceAllStringFunc(src, func(key string) string {
+		sval, exists := state.stringVars[key]
+		if exists {
+			return sval
+		}
+		ival, exists := state.intVars[key]
+		if exists {
+			return fmt.Sprint(ival)
+		}
+		return key
+	})
 }
 
 // ---------------------------------------- Config ----------------------------------------

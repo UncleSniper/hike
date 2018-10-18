@@ -244,6 +244,10 @@ func (parser *Parser) IsKeyword(name string) bool {
 	return parser.Token.Type == tok.T_NAME && parser.Token.Text == name
 }
 
+func (parser *Parser) InterpolateString() string {
+	return parser.specState.InterpolateString(parser.Token.Text)
+}
+
 func (parser *Parser) Fail(fault herr.BuildError) {
 	if parser.firstError == nil {
 		parser.firstError = fault
