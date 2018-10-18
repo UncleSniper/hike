@@ -30,7 +30,7 @@ tree_artifact	::= 'tree' STRING (STRING | '{' tree_body '}')
 tree_body		::= STRING tree_opt* file_filter*
 tree_opt		::= 'name' STRING
 					| 'noCache'
-split_artifact	::= 'split' '{' artifact_ref artifact_ref '}'
+split_artifact	::= 'split' STRING? '{' artifact_ref artifact_ref '}'
 
 transform		::= exec_transform
 exec_transform	::= 'exec' STRING '{' command_word+ exec_option* x_artifact_ref* '}'

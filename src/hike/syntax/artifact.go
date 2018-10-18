@@ -292,9 +292,20 @@ func ParseSplitArtifact(parser *prs.Parser) *hlm.SplitArtifact {
 	}
 	start := &parser.Token.Location
 	parser.Next()
-	if !parser.Expect(tok.T_LBRACE) {
-		parser.Frame("split artifact", start)
-		return nil
+	var key string
+	switch parser.Token.Type {
+		case tok.T_LBRACE:
+		case tok.T_STRING:
+			key = parser.Token.Text
+			parser.Next()
+			if !parser.Expect(tok.T_LBRACE) {
+				parser.Frame("split artifact", start)
+				return nil
+			}
+		default:
+			parser.Die("string (artifact key) or '{'")
+			parser.Frame("split artifact", start)
+			return nil
 	}
 	parser.Next()
 	arise := &herr.AriseRef {
@@ -316,14 +327,29 @@ func ParseSplitArtifact(parser *prs.Parser) *hlm.SplitArtifact {
 		return nil
 	}
 	parser.Next()
-	split := hlm.NewSplitArtifact(nil, nil, arise)
 	specState := parser.SpecState()
+	var ownKey *abs.ArtifactKey
+	if len(key) > 0 {
+		ownKey = &abs.ArtifactKey {
+			Project: specState.Config.EffectiveProjectName(),
+			Artifact: key,
+		}
+	}
+	split := hlm.NewSplitArtifact(ownKey, nil, nil, arise)
 	startRef.InjectArtifact(specState, func(artifact abs.Artifact) {
 		split.StartChild = artifact
 	})
 	endRef.InjectArtifact(specState, func(artifact abs.Artifact) {
 		split.EndChild = artifact
 	})
+	if ownKey != nil {
+		dup := specState.RegisterArtifact(split, arise)
+		if dup != nil {
+			parser.Fail(dup)
+			parser.Frame("split artifact", start)
+			return nil
+		}
+	}
 	return split
 }
 

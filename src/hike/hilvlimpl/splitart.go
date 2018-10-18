@@ -9,6 +9,7 @@ import (
 )
 
 type SplitArtifact struct {
+	OwnKey *abs.ArtifactKey
 	ID abs.ArtifactID
 	Arise *herr.AriseRef
 	StartChild abs.Artifact
@@ -16,8 +17,14 @@ type SplitArtifact struct {
 	Flipped bool
 }
 
-func NewSplitArtifact(startChild, endChild abs.Artifact, arise *herr.AriseRef) *SplitArtifact {
+func NewSplitArtifact(
+	ownKey *abs.ArtifactKey,
+	startChild abs.Artifact,
+	endChild abs.Artifact,
+	arise *herr.AriseRef,
+) *SplitArtifact {
 	return &SplitArtifact {
+		OwnKey: ownKey,
 		ID: abs.NextArtifactID(),
 		Arise: arise,
 		StartChild: startChild,
@@ -26,10 +33,13 @@ func NewSplitArtifact(startChild, endChild abs.Artifact, arise *herr.AriseRef) *
 }
 
 func (split *SplitArtifact) ArtifactKey() *abs.ArtifactKey {
-	if split.Flipped {
-		return split.EndChild.ArtifactKey()
-	} else {
-		return split.StartChild.ArtifactKey()
+	switch {
+		case split.OwnKey != nil:
+			return split.OwnKey
+		case split.Flipped:
+			return split.EndChild.ArtifactKey()
+		default:
+			return split.StartChild.ArtifactKey()
 	}
 }
 
