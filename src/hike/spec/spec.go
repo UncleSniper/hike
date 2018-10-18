@@ -230,7 +230,13 @@ func (state *State) Compile() (err herr.BuildError) {
 	return
 }
 
-func (state *State) SetStringVar(key string, value string) {
+func (state *State) SetStringVar(key string, value string, ifNotExists bool) {
+	if ifNotExists {
+		_, exists := state.stringVars[key]
+		if exists {
+			return
+		}
+	}
 	state.stringVars[key] = value
 }
 
@@ -239,7 +245,13 @@ func (state *State) StringVar(key string) (string, bool) {
 	return value, exists
 }
 
-func (state *State) SetIntVar(key string, value int) {
+func (state *State) SetIntVar(key string, value int, ifNotExists bool) {
+	if ifNotExists {
+		_, exists := state.intVars[key]
+		if exists {
+			return
+		}
+	}
 	state.intVars[key] = value
 }
 

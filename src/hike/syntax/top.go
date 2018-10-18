@@ -1,10 +1,12 @@
 package syntax
 
 import (
+	"strconv"
 	herr "hike/error"
 	tok "hike/token"
 	prs "hike/parser"
 	abs "hike/abstract"
+	con "hike/concrete"
 )
 
 func ParseGoal(parser *prs.Parser) *abs.Goal {
@@ -122,8 +124,34 @@ func ParseSetVar(parser *prs.Parser, isDef bool) {
 	if !parser.ExpectKeyword(initiator) {
 		return
 	}
-	//TODO
-	return
+	start := &parser.Token.Location
+	parser.Next()
+	if !parser.ExpectExp(tok.T_NAME, "variable name") {
+		return
+	}
+	name := parser.Token.Text
+	parser.Next()
+	switch parser.Token.Type {
+		case tok.T_STRING:
+			parser.SpecState().SetStringVar(name, parser.Token.Text, isDef)
+		case tok.T_INT:
+			value, err := strconv.ParseInt(parser.Token.Text, 10, 32)
+			if err != nil {
+				parser.Fail(&con.IllegalIntegerLiteralError {
+					Specifier: parser.Token.Text,
+					LibError: err,
+					Location: &parser.Token.Location,
+				})
+				parser.Frame("variable assignment", start)
+				return
+			}
+			parser.SpecState().SetIntVar(name, int(value), isDef)
+		default:
+			parser.Die("string or int")
+			parser.Frame("variable assignment", start)
+			return
+	}
+	parser.Next()
 }
 
 func TopSetVar(parser *prs.Parser) {

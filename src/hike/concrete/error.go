@@ -126,3 +126,31 @@ func (unresolved *UnresolvedArtifactPathError) BuildErrorLocation() *loc.Locatio
 }
 
 var _ herr.BuildError = &UnresolvedArtifactPathError{}
+
+// ---------------------------------------- IllegalIntegerLiteralError ----------------------------------------
+
+type IllegalIntegerLiteralError struct {
+	herr.BuildErrorBase
+	Specifier string
+	LibError error
+	Location *loc.Location
+}
+
+func (illegal *IllegalIntegerLiteralError) PrintBuildError(level uint) error {
+	prn := herr.NewErrorPrinter()
+	prn.Level(level)
+	prn.Printf("Illegal integer literal '%s':\n", illegal.Specifier)
+	prn.Indent(1)
+	prn.Println(illegal.LibError.Error())
+	prn.Indent(0)
+	prn.Print("at ")
+	prn.Location(illegal.Location)
+	illegal.InjectBacktrace(prn, 0)
+	return prn.Done()
+}
+
+func (illegal *IllegalIntegerLiteralError) BuildErrorLocation() *loc.Location {
+	return illegal.Location
+}
+
+var _ herr.BuildError = &IllegalIntegerLiteralError{}
