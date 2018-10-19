@@ -3,11 +3,13 @@ toplevel		::= goal
 					| 'artifact' artifact
 					| setvar
 					| setvardef
+					| include
 
 goal			::= 'goal' NAME (action | '{' goal_body '}')
 goal_body		::= ('label' STRING)? action+
 setvar			::= 'set' NAME (STRING | INT)
 setvardef		::= 'setdef' NAME (STRING | INT)
+include			::= 'include' 'ifExists'? STRING
 
 action			::= attain
 					| require

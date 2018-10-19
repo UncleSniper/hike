@@ -254,6 +254,12 @@ func (parser *Parser) Fail(fault herr.BuildError) {
 	}
 }
 
+func (parser *Parser) SupersedeError(fault herr.BuildError) {
+	if fault != nil {
+		parser.firstError = fault
+	}
+}
+
 func (parser *Parser) Frame(what string, start *loc.Location) {
 	if start == nil {
 		start = &parser.Token.Location
@@ -264,6 +270,18 @@ func (parser *Parser) Frame(what string, start *loc.Location) {
 			Start: start,
 		})
 	}
+}
+
+func (parser *Parser) PushLexer(newLexer chan *tok.Token) chan *tok.Token {
+	oldLexer := parser.lexer
+	parser.lexer = newLexer
+	parser.Token = <-newLexer
+	return oldLexer
+}
+
+func (parser *Parser) PopLexer(oldLexer chan *tok.Token) {
+	parser.lexer = oldLexer
+	parser.Token = <-oldLexer
 }
 
 func (parser *Parser) Top() {

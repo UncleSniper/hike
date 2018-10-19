@@ -158,7 +158,25 @@ func NewState(config *Config) *State {
 		intVars: make(map[string]int),
 	}
 	state.stringVars["$"] = "$"
+	state.updateHikefileVars()
 	return state
+}
+
+func (state *State) updateHikefileVars() {
+	state.stringVars["hikefile"] = state.Config.CurrentHikefile
+	state.stringVars["hikefileBase"] = filepath.Dir(state.Config.CurrentHikefile)
+}
+
+func (state *State) PushHikefile(newHikefile string) string {
+	oldHikefile := state.Config.CurrentHikefile
+	state.Config.CurrentHikefile = newHikefile
+	state.updateHikefileVars()
+	return oldHikefile
+}
+
+func (state *State) PopHikefile(oldHikefile string) {
+	state.Config.CurrentHikefile = oldHikefile
+	state.updateHikefileVars()
 }
 
 func (state *State) Goal(name string) *abs.Goal {
@@ -289,6 +307,7 @@ func (state *State) InterpolateString(src string) string {
 type Config struct {
 	ProjectName string
 	TopDir string
+	CurrentHikefile string
 }
 
 func (config *Config) EffectiveProjectName() string {

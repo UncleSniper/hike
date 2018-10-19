@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"flag"
 	"time"
+	"path/filepath"
 	herr "hike/error"
 	spc "hike/spec"
 	knw "hike/known"
@@ -42,6 +43,17 @@ func numWidth(n int) (exp int) {
 	return
 }
 
+func fileExists(path string) (exists bool, err error) {
+	_, err = os.Stat(path)
+	switch {
+		case err == nil:
+			exists = true
+		case os.IsNotExist(err):
+			err = nil
+	}
+	return
+}
+
 func main() {
 	var hikefileName string
 	const hikefileUsage = "Filename of hikefile to read for root project."
@@ -56,19 +68,50 @@ func main() {
 	flag.BoolVar(&dumpStruct, "dump", false, dumpStructUsage)
 	flag.Parse()
 	noDefaultBuild := dumpStruct
+	// find hikefile
 	cwd, nerr := os.Getwd()
 	if nerr != nil {
 		fmt.Fprintln(os.Stderr, "Oyyyy, couldn't determine current working directory (say whaaaaat):", nerr.Error())
 		os.Exit(1)
 	}
+	if hikefileName == "" {
+		hikefileName = DEFAULT_HIKEFILE
+	}
+	hikefileName = filepath.FromSlash(hikefileName)
+	var topDir, hikefilePath string
+	if filepath.IsAbs(hikefileName) {
+		topDir = cwd
+		hikefilePath = filepath.Clean(hikefileName)
+	} else {
+		topDir = cwd
+		for {
+			hikefilePath = filepath.Join(topDir, hikefileName)
+			exists, xerr := fileExists(hikefilePath)
+			if xerr != nil {
+				fmt.Fprintln(os.Stderr, "Failed to stat '%s': %s\n", hikefileName, xerr.Error())
+				os.Exit(1)
+			}
+			if exists {
+				break
+			}
+			nextParent := filepath.Dir(topDir)
+			if nextParent == topDir || len(nextParent) == 0 {
+				fmt.Fprintf(os.Stderr, "No '%s' found in '%s' nor any ancestor\n", hikefileName, cwd)
+				os.Exit(1)
+			}
+			topDir = nextParent
+		}
+	}
+	// init state
 	config := &spc.Config {
 		ProjectName: "this",
-		TopDir: cwd,
+		TopDir: topDir,
+		CurrentHikefile: hikefilePath,
 	}
 	rootState := spc.NewState(config)
-	//TODO: search upward
 	knownStructures := prs.NewKnownStructures()
 	knw.RegisterAllKnownStructures(knownStructures)
+	// compile hikefile
 	fullStartTime := time.Now()
 	err := rdr.ReadFile(hikefileName, knownStructures, rootState)
 	if err != nil {
@@ -78,6 +121,7 @@ func main() {
 	if err != nil {
 		die(err)
 	}
+	// perform dumps
 	if dumpStruct {
 		for _, artifact := range rootState.KnownArtifacts() {
 			nerr = artifact.DumpArtifact(0)
@@ -92,6 +136,7 @@ func main() {
 			}
 		}
 	}
+	// retrieve goals
 	goalNames := flag.Args()
 	if len(goalNames) == 0 {
 		if noDefaultBuild {
@@ -108,6 +153,7 @@ func main() {
 		}
 		goals = append(goals, goal)
 	}
+	// build plan
 	plan := abs.NewPlan()
 	for _, goal := range goals {
 		for _, action := range goal.Actions() {
@@ -117,6 +163,7 @@ func main() {
 			}
 		}
 	}
+	// execute plan
 	stepCount := plan.StepCount()
 	stepIndexWidth := numWidth(stepCount)
 	planDuration := time.Since(fullStartTime)

@@ -1,9 +1,11 @@
 package syntax
 
 import (
+	"os"
 	"strconv"
 	herr "hike/error"
 	tok "hike/token"
+	lex "hike/lexer"
 	prs "hike/parser"
 	abs "hike/abstract"
 	con "hike/concrete"
@@ -160,4 +162,61 @@ func TopSetVar(parser *prs.Parser) {
 
 func TopSetVarDef(parser *prs.Parser) {
 	ParseSetVar(parser, true)
+}
+
+func includeHikefile(parser *prs.Parser, ifExists bool) herr.BuildError {
+	specState := parser.SpecState()
+	path := specState.Config.RealPath(parser.InterpolateString())
+	pathLocation := &parser.Token.Location
+	file, nerr := os.Open(path)
+	if nerr != nil {
+		if ifExists && os.IsNotExist(nerr) {
+			parser.Next()
+			return nil
+		}
+		return &lex.HikefileIOError {
+			TrueError: nerr,
+			Location: pathLocation,
+		}
+	}
+	defer file.Close()
+	tokchan := make(chan *tok.Token)
+	lexer := lex.New(path, tokchan)
+	oldHikefile := specState.PushHikefile(path)
+	defer specState.PopHikefile(oldHikefile)
+	go lexer.Slurp(file)
+	oldLexer := parser.PushLexer(tokchan)
+	defer parser.PopLexer(oldLexer)
+	parser.Utterance()
+	parser.Drain()
+	parser.SupersedeError(lexer.FirstError())
+	return nil
+}
+
+func ParseInclude(parser *prs.Parser) {
+	if !parser.ExpectKeyword("include") {
+		return
+	}
+	start := &parser.Token.Location
+	parser.Next()
+	var ifExists bool
+	switch {
+		case parser.Token.Type == tok.T_STRING:
+		case parser.IsKeyword("ifExists"):
+			ifExists = true
+			parser.Next()
+			if !parser.ExpectExp(tok.T_STRING, "included hikefile path") {
+				parser.Frame("'include' directive", start)
+				return
+			}
+		default:
+			parser.Die("'ifExists' or string (included hikefile path)")
+			parser.Frame("'include' directive", start)
+			return
+	}
+	err := includeHikefile(parser, ifExists)
+	if err != nil {
+		parser.Fail(err)
+		parser.Frame("'include' directive", start)
+	}
 }
