@@ -239,9 +239,10 @@ func (artifact *FileArtifact) Require(plan *abs.Plan, requireArise *herr.AriseRe
 			})
 		}
 	} else {
-		exists, err := FileExists(artifact.Path, requireArise)
+		exists, nerr := FileExists(artifact.Path, requireArise)
 		switch {
-			case err != nil:
+			case nerr != nil:
+				err = nerr
 				err.AddErrorFrame(&RequireArtifactFrame {
 					Artifact: artifact,
 				})

@@ -113,7 +113,7 @@ func main() {
 	knw.RegisterAllKnownStructures(knownStructures)
 	// compile hikefile
 	fullStartTime := time.Now()
-	err := rdr.ReadFile(hikefileName, knownStructures, rootState)
+	err := rdr.ReadFile(hikefilePath, knownStructures, rootState)
 	if err != nil {
 		die(err)
 	}

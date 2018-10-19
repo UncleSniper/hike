@@ -12,7 +12,7 @@ import (
 var stringInterpolRegex *regexp.Regexp
 
 func init() {
-	stringInterpolRegex = regexp.MustCompile("$\\{[^{}]+\\}")
+	stringInterpolRegex = regexp.MustCompile(`\$\{[^{}]+\}`)
 }
 
 // ---------------------------------------- BuildError ----------------------------------------
@@ -289,17 +289,19 @@ func (state *State) IntVar(key string) (int, bool) {
 }
 
 func (state *State) InterpolateString(src string) string {
-	return stringInterpolRegex.ReplaceAllStringFunc(src, func(key string) string {
-		sval, exists := state.stringVars[key]
+	res := stringInterpolRegex.ReplaceAllStringFunc(src, func(key string) string {
+		ikey := key[2:len(key) - 1]
+		sval, exists := state.stringVars[ikey]
 		if exists {
 			return sval
 		}
-		ival, exists := state.intVars[key]
+		ival, exists := state.intVars[ikey]
 		if exists {
 			return fmt.Sprint(ival)
 		}
 		return key
 	})
+	return res
 }
 
 // ---------------------------------------- Config ----------------------------------------

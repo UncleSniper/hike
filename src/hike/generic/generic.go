@@ -219,7 +219,7 @@ func (base *CommandTransformBase) PlanCommandTransform(
 	} else {
 		suffix = sources[0].DisplayName()
 	}
-	step.Description = fmt.Sprintf("%s %s", descriptionPrefix, suffix)
+	step.Description = fmt.Sprintf("[%s] %s %s", destination.ArtifactKey().Project, descriptionPrefix, suffix)
 	plan.AddStep(step)
 }
 
