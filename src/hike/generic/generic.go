@@ -12,20 +12,6 @@ import (
 	con "hike/concrete"
 )
 
-// ---------------------------------------- Artifact ----------------------------------------
-
-func PathsOfArtifacts(artifacts []abs.Artifact) ([]string, herr.BuildError) {
-	var all []string
-	var err herr.BuildError
-	for _, artifact := range artifacts {
-		all, err = artifact.PathNames(all)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return all, nil
-}
-
 // ---------------------------------------- BuildError ----------------------------------------
 
 type CommandFailedError struct {
@@ -115,7 +101,7 @@ func (step *CommandStep) Perform() herr.BuildError {
 			return err
 		}
 	}
-	srcPaths, err := PathsOfArtifacts(step.Sources)
+	srcPaths, err := con.PathsOfArtifacts(step.Sources)
 	if err != nil {
 		return err
 	}

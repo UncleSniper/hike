@@ -154,3 +154,40 @@ func (illegal *IllegalIntegerLiteralError) BuildErrorLocation() *loc.Location {
 }
 
 var _ herr.BuildError = &IllegalIntegerLiteralError{}
+
+// ---------------------------------------- IllegalIntegerLiteralError ----------------------------------------
+
+type ConflictingDestinationsError struct {
+	herr.BuildErrorBase
+	Operation string
+	OperationArise *herr.AriseRef
+	PathCount uint
+	PathsAreDestinations bool
+}
+
+func (conflict *ConflictingDestinationsError) PrintBuildError(level uint) error {
+	prn := herr.NewErrorPrinter()
+	prn.Level(level)
+	prn.Println("Conflicting destinations for")
+	prn.Indent(1)
+	prn.Println(conflict.Operation)
+	prn.Indent(0)
+	prn.Arise(conflict.OperationArise, 0)
+	prn.Println()
+	prn.Indent(0)
+	var ptype string
+	if conflict.PathsAreDestinations {
+		ptype = "destination"
+	} else {
+		ptype = "source"
+	}
+	prn.Printf("as %d paths arise from %s artifact(s), but exactly one was expected", ptype, conflict.PathCount)
+	conflict.InjectBacktrace(prn, 0)
+	return prn.Done()
+}
+
+func (conflict *ConflictingDestinationsError) BuildErrorLocation() *loc.Location {
+	return conflict.OperationArise.Location
+}
+
+var _ herr.BuildError = &ConflictingDestinationsError{}

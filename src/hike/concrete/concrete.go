@@ -709,3 +709,34 @@ func MakeEnclosingDirectories(childPath string, arise *herr.AriseRef) herr.Build
 		OperationArise: arise,
 	}
 }
+
+func ForceToRelativeAndRebase(oldPath, rebaseFrom string) string {
+	oldPath = filepath.Clean(oldPath)
+	rebaseFrom = filepath.Clean(rebaseFrom)
+	if oldPath == rebaseFrom {
+		return ""
+	}
+	if strings.HasPrefix(oldPath, rebaseFrom + sepString) {
+		return oldPath[len(rebaseFrom) + 1:]
+	}
+	prefix := filepath.VolumeName(oldPath) + sepString
+	if strings.HasPrefix(oldPath, prefix) {
+		return oldPath[len(prefix):]
+	}
+	if len(oldPath) > 0 && rune(oldPath[0]) == rune(os.PathSeparator) {
+		return oldPath[1:]
+	}
+	return oldPath
+}
+
+func PathsOfArtifacts(artifacts []abs.Artifact) ([]string, herr.BuildError) {
+	var all []string
+	var err herr.BuildError
+	for _, artifact := range artifacts {
+		all, err = artifact.PathNames(all)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return all, nil
+}
