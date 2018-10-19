@@ -51,7 +51,7 @@ func ParseGoal(parser *prs.Parser) *abs.Goal {
 					parser.Frame("goal", start)
 					return nil
 				}
-				goal.Label = parser.Token.Text
+				goal.Label = parser.InterpolateString()
 				parser.Next()
 				haveLabel = true
 			}
@@ -133,7 +133,7 @@ func ParseSetVar(parser *prs.Parser, isDef bool) {
 	parser.Next()
 	switch parser.Token.Type {
 		case tok.T_STRING:
-			parser.SpecState().SetStringVar(name, parser.Token.Text, isDef)
+			parser.SpecState().SetStringVar(name, parser.InterpolateString(), isDef)
 		case tok.T_INT:
 			value, err := strconv.ParseInt(parser.Token.Text, 10, 32)
 			if err != nil {

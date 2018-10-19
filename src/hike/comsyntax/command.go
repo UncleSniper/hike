@@ -20,7 +20,7 @@ func IsCommandWord(parser *prs.Parser) bool {
 func ParseCommandWord(parser *prs.Parser) gen.CommandWord {
 	switch parser.Token.Type {
 		case tok.T_STRING:
-			text := parser.Token.Text
+			text := parser.InterpolateString()
 			parser.Next()
 			return &gen.StaticCommandWord {
 				Word: text,

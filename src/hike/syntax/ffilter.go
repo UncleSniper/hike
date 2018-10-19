@@ -51,7 +51,7 @@ func ParseWildcardFileFilter(parser *prs.Parser) *hlm.WildcardFileFilter {
 		parser.Frame("'wildcard' file filter", start)
 		return nil
 	}
-	pattern := parser.Token.Text
+	pattern := parser.InterpolateString()
 	parser.Next()
 	return hlm.NewWildcardFileFilter(pattern)
 }

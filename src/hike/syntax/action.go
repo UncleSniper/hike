@@ -102,7 +102,7 @@ func ParseDeleteAction(parser *prs.Parser) abs.Action {
 	config := parser.SpecState().Config
 	switch {
 		case parser.Token.Type == tok.T_STRING:
-			path := config.RealPath(parser.Token.Text)
+			path := config.RealPath(parser.InterpolateString())
 			parser.Next()
 			action := &gen.DeletePathAction {
 				Path: path,

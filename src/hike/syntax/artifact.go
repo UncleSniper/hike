@@ -21,7 +21,7 @@ func ParseFileArtifact(parser *prs.Parser) *con.FileArtifact {
 		return nil
 	}
 	config := parser.SpecState().Config
-	key := prs.SplitArtifactKey(parser.Token.Text, config)
+	key := prs.SplitArtifactKey(parser.InterpolateString(), config)
 	parser.Next()
 	arise := &herr.AriseRef {
 		Text: "'file' stanza",
@@ -30,7 +30,7 @@ func ParseFileArtifact(parser *prs.Parser) *con.FileArtifact {
 	specState := parser.SpecState()
 	switch parser.Token.Type {
 		case tok.T_STRING:
-			path := specState.Config.RealPath(parser.Token.Text)
+			path := specState.Config.RealPath(parser.InterpolateString())
 			parser.Next()
 			file := con.NewFile(*key, con.GuessFileArtifactName(path, config.TopDir), arise, path, nil)
 			dup := parser.SpecState().RegisterArtifact(file, arise)
@@ -45,7 +45,7 @@ func ParseFileArtifact(parser *prs.Parser) *con.FileArtifact {
 				parser.Frame("file artifact", start)
 				return nil
 			}
-			path := specState.Config.RealPath(parser.Token.Text)
+			path := specState.Config.RealPath(parser.InterpolateString())
 			parser.Next()
 			name := ""
 			haveName := false
@@ -57,7 +57,7 @@ func ParseFileArtifact(parser *prs.Parser) *con.FileArtifact {
 					parser.Frame("file artifact", start)
 					return nil
 				}
-				name = parser.Token.Text
+				name = parser.InterpolateString()
 				parser.Next()
 				haveName = true
 			} else {
@@ -123,7 +123,7 @@ func ParseGroupArtifact(parser *prs.Parser) *con.GroupArtifact {
 		parser.Frame("group artifact", start)
 		return nil
 	}
-	key := prs.SplitArtifactKey(parser.Token.Text, parser.SpecState().Config)
+	key := prs.SplitArtifactKey(parser.InterpolateString(), parser.SpecState().Config)
 	parser.Next()
 	if !parser.Expect(tok.T_LBRACE) {
 		parser.Frame("group artifact", start)
@@ -141,7 +141,7 @@ func ParseGroupArtifact(parser *prs.Parser) *con.GroupArtifact {
 		parser.Frame("group artifact", start)
 		return nil
 	}
-	name := parser.Token.Text
+	name := parser.InterpolateString()
 	parser.Next()
 	arise := &herr.AriseRef {
 		Text: "'artifacts' stanza",
@@ -197,7 +197,7 @@ func ParseTreeArtifact(parser *prs.Parser) *hlm.TreeArtifact {
 		return nil
 	}
 	specState := parser.SpecState()
-	key := prs.SplitArtifactKey(parser.Token.Text, specState.Config)
+	key := prs.SplitArtifactKey(parser.InterpolateString(), specState.Config)
 	parser.Next()
 	arise := &herr.AriseRef {
 		Text: "'tree' stanza",
@@ -205,7 +205,7 @@ func ParseTreeArtifact(parser *prs.Parser) *hlm.TreeArtifact {
 	}
 	switch parser.Token.Type {
 		case tok.T_STRING:
-			root := specState.Config.RealPath(parser.Token.Text)
+			root := specState.Config.RealPath(parser.InterpolateString())
 			parser.Next()
 			tree := hlm.NewTreeArtifact(
 				*key,
@@ -228,7 +228,7 @@ func ParseTreeArtifact(parser *prs.Parser) *hlm.TreeArtifact {
 				parser.Frame("tree artifact", start)
 				return nil
 			}
-			root := specState.Config.RealPath(parser.Token.Text)
+			root := specState.Config.RealPath(parser.InterpolateString())
 			parser.Next()
 			name := ""
 			haveName := false
@@ -244,7 +244,7 @@ func ParseTreeArtifact(parser *prs.Parser) *hlm.TreeArtifact {
 							parser.Frame("tree artifact", start)
 							return nil
 						}
-						name = parser.Token.Text
+						name = parser.InterpolateString()
 						parser.Next()
 						haveName = true
 					case "noCache":
@@ -310,7 +310,7 @@ func ParseSplitArtifact(parser *prs.Parser) *hlm.SplitArtifact {
 	switch parser.Token.Type {
 		case tok.T_LBRACE:
 		case tok.T_STRING:
-			key = parser.Token.Text
+			key = parser.InterpolateString()
 			parser.Next()
 			if !parser.Expect(tok.T_LBRACE) {
 				parser.Frame("split artifact", start)

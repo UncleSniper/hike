@@ -19,7 +19,7 @@ func ParseCommandTransform(parser *prs.Parser) *gen.MultiCommandTransform {
 		parser.Frame("command transform", start)
 		return nil
 	}
-	description := parser.Token.Text
+	description := parser.InterpolateString()
 	parser.Next()
 	if !parser.Expect(tok.T_LBRACE) {
 		parser.Frame("command transform", start)

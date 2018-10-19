@@ -53,7 +53,7 @@ func ParseArtifactScanDir(parser *prs.Parser) []abs.Artifact {
 	specState := parser.SpecState()
 	switch parser.Token.Type {
 		case tok.T_STRING:
-			root := specState.Config.RealPath(parser.Token.Text)
+			root := specState.Config.RealPath(parser.InterpolateString())
 			parser.Next()
 			return doArtifactScanDir(parser, start, root, "", "", "", nil)
 		case tok.T_LBRACE:
@@ -62,7 +62,7 @@ func ParseArtifactScanDir(parser *prs.Parser) []abs.Artifact {
 				parser.Frame("'scandir' artifact set", start)
 				return nil
 			}
-			root := specState.Config.RealPath(parser.Token.Text)
+			root := specState.Config.RealPath(parser.InterpolateString())
 			parser.Next()
 			var key, name, base, optdesc string
 			var optval *string
@@ -94,9 +94,9 @@ func ParseArtifactScanDir(parser *prs.Parser) []abs.Artifact {
 					return nil
 				}
 				if isPath {
-					*optval = specState.Config.RealPath(parser.Token.Text)
+					*optval = specState.Config.RealPath(parser.InterpolateString())
 				} else {
-					*optval = parser.Token.Text
+					*optval = parser.InterpolateString()
 				}
 				parser.Next()
 			}

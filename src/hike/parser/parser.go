@@ -500,7 +500,7 @@ func (parser *Parser) ArtifactRef(arise *herr.AriseRef, extended bool) ArtifactR
 				return nil
 			}
 			specState := parser.SpecState()
-			key := SplitArtifactKey(parser.Token.Text, specState.Config)
+			key := SplitArtifactKey(parser.InterpolateString(), specState.Config)
 			refLocation := &parser.Token.Location
 			parser.Next()
 			artifact := specState.Artifact(key)

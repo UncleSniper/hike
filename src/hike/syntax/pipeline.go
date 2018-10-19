@@ -52,9 +52,9 @@ func ParsePipelineArtifact(parser *prs.Parser) abs.Artifact {
 			return nil
 		}
 		if isPath {
-			*optval = specState.Config.RealPath(parser.Token.Text)
+			*optval = specState.Config.RealPath(parser.InterpolateString())
 		} else {
-			*optval = parser.Token.Text
+			*optval = parser.InterpolateString()
 		}
 		parser.Next()
 	}

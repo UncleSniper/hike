@@ -20,7 +20,7 @@ func ParseCommandTransformFactory(parser *prs.Parser) *hlm.CommandTransformFacto
 		parser.Frame("command transform factory", start)
 		return nil
 	}
-	description := parser.Token.Text
+	description := parser.InterpolateString()
 	parser.Next()
 	if !parser.Expect(tok.T_LBRACE) {
 		parser.Frame("command transform factory", start)

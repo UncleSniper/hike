@@ -23,7 +23,7 @@ func ParseStaticFile(parser *prs.Parser) *hlm.StaticFileFactory {
 	specState := parser.SpecState()
 	switch parser.Token.Type {
 		case tok.T_STRING:
-			path := specState.Config.RealPath(parser.Token.Text)
+			path := specState.Config.RealPath(parser.InterpolateString())
 			parser.Next()
 			return hlm.NewStaticFileFactory(path, "", "", "", nil, arise)
 		case tok.T_LBRACE:
@@ -63,9 +63,9 @@ func ParseStaticFile(parser *prs.Parser) *hlm.StaticFileFactory {
 					return nil
 				}
 				if isPath {
-					*optval = specState.Config.RealPath(parser.Token.Text)
+					*optval = specState.Config.RealPath(parser.InterpolateString())
 				} else {
-					*optval = parser.Token.Text
+					*optval = parser.InterpolateString()
 				}
 				parser.Next()
 			}
@@ -107,7 +107,7 @@ func manglePathRegex(parser *prs.Parser) *regexp.Regexp {
 	pathRegex, rerr := regexp.Compile(parser.Token.Text)
 	if rerr != nil {
 		parser.Fail(&hlm.IllegalRegexError {
-			Regex: parser.Token.Text,
+			Regex: parser.InterpolateString(),
 			LibError: rerr,
 			PatternArise: &herr.AriseRef {
 				Text: "path regex",
@@ -139,7 +139,7 @@ func ParseRegexFile(parser *prs.Parser) *hlm.RegexFileFactory {
 				return nil
 			}
 			parser.ExpectExp(tok.T_STRING, "path replacement")
-			pathReplacement := parser.Token.Text
+			pathReplacement := parser.InterpolateString()
 			parser.Next()
 			return hlm.NewRegexFileFactory(pathRegex, pathReplacement, "", "", "", "", "", nil, arise)
 		case tok.T_LBRACE:
@@ -154,7 +154,7 @@ func ParseRegexFile(parser *prs.Parser) *hlm.RegexFileFactory {
 				return nil
 			}
 			parser.ExpectExp(tok.T_STRING, "path replacement")
-			pathReplacement := parser.Token.Text
+			pathReplacement := parser.InterpolateString()
 			parser.Next()
 			var key, name, base, rebaseFrom, rebaseTo, optdesc string
 			var optval *string
@@ -193,9 +193,9 @@ func ParseRegexFile(parser *prs.Parser) *hlm.RegexFileFactory {
 					return nil
 				}
 				if isPath {
-					*optval = specState.Config.RealPath(parser.Token.Text)
+					*optval = specState.Config.RealPath(parser.InterpolateString())
 				} else {
-					*optval = parser.Token.Text
+					*optval = parser.InterpolateString()
 				}
 				parser.Next()
 			}
