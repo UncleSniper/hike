@@ -148,13 +148,17 @@ var _ abs.Step = &CopyStep{}
 
 // ---------------------------------------- Transform ----------------------------------------
 
-type CopyTransform struct {
-	Sources []abs.Artifact
+type CopyTransformBase struct {
 	DestinationIsDir bool
 	RebaseFrom string
+	Arise *herr.AriseRef
+}
+
+type CopyTransform struct {
+	CopyTransformBase
+	Sources []abs.Artifact
 	UIBase string
 	OwningProject string
-	Arise *herr.AriseRef
 }
 
 func (xform *CopyTransform) AddSource(source abs.Artifact) {

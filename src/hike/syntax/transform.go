@@ -116,12 +116,11 @@ func ParseCopyTransform(parser *prs.Parser) *gen.CopyTransform {
 	specState := parser.SpecState()
 	transform := &gen.CopyTransform {
 		Sources: nil,
-		DestinationIsDir: false,
-		RebaseFrom: specState.Config.TopDir,
 		UIBase: specState.Config.TopDir,
 		OwningProject: specState.Config.EffectiveProjectName(),
-		Arise: arise,
 	}
+	transform.RebaseFrom = specState.Config.TopDir
+	transform.Arise = arise
 	switch {
 		case parser.IsArtifactRef(false):
 			source := parser.ArtifactRef(arise, false)

@@ -60,6 +60,30 @@ func (factory *CommandTransformFactory) NewTransform(
 
 var _ hlv.TransformFactory = &CommandTransformFactory{}
 
+type CopyTransformFactory struct {
+	gen.CopyTransformBase
+}
+
+func NewCopyTransformFactory(
+	destinationIsDir bool,
+	rebaseFrom string,
+	arise *herr.AriseRef,
+) *CopyTransformFactory {
+	factory := &CopyTransformFactory{}
+	factory.DestinationIsDir = destinationIsDir
+	factory.RebaseFrom = rebaseFrom
+	factory.Arise = arise
+	return factory
+}
+
+func (factory *CopyTransformFactory) NewTransform(
+	sources []abs.Artifact,
+	state *spc.State,
+) (abs.Transform, herr.BuildError) {
+	//TODO
+	return nil, nil
+}
+
 // ---------------------------------------- ArtifactFactory ----------------------------------------
 
 type ArtifactFactoryBase struct {
