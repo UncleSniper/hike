@@ -118,6 +118,10 @@ func (step *CopyStep) fileCopyFailed(
 }
 
 func (step *CopyStep) doCopyFile(src, dest string) herr.BuildError {
+	err := con.MakeEnclosingDirectories(dest, step.Arise)
+	if err != nil {
+		return err
+	}
 	info, nerr := os.Stat(src)
 	if nerr != nil {
 		return step.fileCopyFailed(src, dest, nerr)
@@ -156,4 +160,70 @@ func (xform *CopyTransform) TransformDescr() string {
 	return fmt.Sprintf("[%s] copy file", xform.OwningProject)
 }
 
-//TODO
+func (xform *CopyTransform) TransformArise() *herr.AriseRef {
+	return xform.Arise
+}
+
+func (xform *CopyTransform) Plan(destination abs.Artifact, plan *abs.Plan) herr.BuildError {
+	return con.PlanMultiTransform(
+		xform,
+		xform.Sources,
+		destination,
+		plan,
+		func() herr.BuildError {
+			srcPaths, err := con.PathsOfArtifacts(xform.Sources)
+			if err != nil {
+				err.AddErrorFrame(&con.ApplyTransformFrame {
+					Transform: xform,
+				})
+				return err
+			}
+			destPaths, err := destination.PathNames(nil)
+			if err != nil {
+				err.AddErrorFrame(&con.ApplyTransformFrame {
+					Transform: xform,
+				})
+				return err
+			}
+			step := &CopyStep {
+				Sources: xform.Sources,
+				Destination: destination,
+				DestinationIsDir: xform.DestinationIsDir,
+				RebaseFrom: xform.RebaseFrom,
+				Arise: xform.Arise,
+			}
+			step.Description = fmt.Sprintf(
+				"copy %s -> %s",
+				con.GuessGroupArtifactName(srcPaths, xform.RebaseFrom),
+				con.GuessGroupArtifactName(destPaths, xform.RebaseFrom),
+			)
+			plan.AddStep(step)
+			return nil
+		},
+	)
+}
+
+func (xform *CopyTransform) DumpTransform(level uint) error {
+	prn := herr.NewErrorPrinter()
+	prn.Out = os.Stdout
+	prn.Level(level)
+	prn.Println("copy {")
+	for _, source := range xform.Sources {
+		prn.Indent(1)
+		con.PrintErrorString(prn, source.ArtifactKey().Unified())
+		prn.Println()
+	}
+	prn.Indent(1)
+	prn.Print("rebaseFrom ")
+	con.PrintErrorString(prn, xform.RebaseFrom)
+	prn.Println()
+	if xform.DestinationIsDir {
+		prn.Indent(1)
+		prn.Println("toDirectory")
+	}
+	prn.Indent(0)
+	prn.Print("}")
+	return prn.Done()
+}
+
+var _ abs.Transform = &CopyTransform{}

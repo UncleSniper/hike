@@ -40,6 +40,7 @@ tree_opt		::= 'name' STRING
 split_artifact	::= 'split' STRING? '{' artifact_ref artifact_ref '}'
 
 transform		::= exec_transform
+					| copy_transform
 exec_transform	::= 'exec' STRING '{' command_word+ exec_option* x_artifact_ref* '}'
 command_word	::= STRING
 					| 'source'
@@ -47,6 +48,10 @@ command_word	::= STRING
 					| '{' command_word+ '}'
 exec_option		::= 'loud'
 					| 'suffixIsDestination'
+copy_transform	::= 'copy' (artifact_ref | '{' copy_xform_body '}')
+copy_xform_body	::= artifact_ref+ copy_option*
+copy_option		::= 'rebaseFrom' STRING
+					| 'toDirectory'
 
 artifact_set	::= artifact
 					| artifact_each
