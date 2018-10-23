@@ -118,6 +118,7 @@ func ParseCopyTransform(parser *prs.Parser) *gen.CopyTransform {
 		Sources: nil,
 		DestinationIsDir: false,
 		RebaseFrom: specState.Config.TopDir,
+		UIBase: specState.Config.TopDir,
 		OwningProject: specState.Config.EffectiveProjectName(),
 		Arise: arise,
 	}

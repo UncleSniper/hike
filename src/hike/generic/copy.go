@@ -135,7 +135,7 @@ func (step *CopyStep) doCopyFile(src, dest string) herr.BuildError {
 	if nerr != nil {
 		return step.fileCopyFailed(src, dest, nerr)
 	}
-	_, nerr = io.Copy(inf, outf)
+	_, nerr = io.Copy(outf, inf)
 	outf.Close()
 	if nerr != nil {
 		os.Remove(dest)
@@ -152,6 +152,7 @@ type CopyTransform struct {
 	Sources []abs.Artifact
 	DestinationIsDir bool
 	RebaseFrom string
+	UIBase string
 	OwningProject string
 	Arise *herr.AriseRef
 }
@@ -198,8 +199,8 @@ func (xform *CopyTransform) Plan(destination abs.Artifact, plan *abs.Plan) herr.
 			}
 			step.Description = fmt.Sprintf(
 				"copy %s -> %s",
-				con.GuessGroupArtifactName(srcPaths, xform.RebaseFrom),
-				con.GuessGroupArtifactName(destPaths, xform.RebaseFrom),
+				con.RelPath(con.GuessGroupArtifactName(srcPaths, xform.RebaseFrom), xform.UIBase),
+				con.RelPath(con.GuessGroupArtifactName(destPaths, xform.UIBase), xform.UIBase),
 			)
 			plan.AddStep(step)
 			return nil

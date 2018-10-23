@@ -633,11 +633,7 @@ func GuessGroupArtifactName(paths []string, base string) string {
 		case 0:
 			return filepath.ToSlash(base)
 		case 1:
-			if len(paths[0]) > len(base) + 1 && strings.HasPrefix(paths[0], base + sepString) {
-				return filepath.ToSlash(paths[0][len(base) + 1:])
-			} else {
-				return filepath.ToSlash(paths[0])
-			}
+			return filepath.ToSlash(paths[0])
 	}
 	var suffix []rune
 	var prefix string
@@ -686,6 +682,14 @@ func RebasePath(oldPath, fromBase, toBase string) string {
 		return filepath.Join(toBase, tmp)
 	} else {
 		return oldPath
+	}
+}
+
+func RelPath(path, base string) string {
+	if len(path) > len(base) + 1 && strings.HasPrefix(path, base + sepString) {
+		return path[len(base) + 1:]
+	} else {
+		return path
 	}
 }
 
