@@ -156,6 +156,10 @@ type CopyTransform struct {
 	Arise *herr.AriseRef
 }
 
+func (xform *CopyTransform) AddSource(source abs.Artifact) {
+	xform.Sources = append(xform.Sources, source)
+}
+
 func (xform *CopyTransform) TransformDescr() string {
 	return fmt.Sprintf("[%s] copy file", xform.OwningProject)
 }

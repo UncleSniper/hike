@@ -102,3 +102,99 @@ func TopCommandTransform(parser *prs.Parser) abs.Transform {
 		return nil
 	}
 }
+
+func ParseCopyTransform(parser *prs.Parser) *gen.CopyTransform {
+	if !parser.ExpectKeyword("copy") {
+		return nil
+	}
+	start := &parser.Token.Location
+	parser.Next()
+	arise := &herr.AriseRef {
+		Text: "'copy' stanza",
+		Location: start,
+	}
+	specState := parser.SpecState()
+	transform := &gen.CopyTransform {
+		Sources: nil,
+		DestinationIsDir: false,
+		RebaseFrom: specState.Config.TopDir,
+		OwningProject: specState.Config.EffectiveProjectName(),
+		Arise: arise,
+	}
+	switch {
+		case parser.IsArtifactRef(false):
+			source := parser.ArtifactRef(arise, false)
+			if source == nil {
+				parser.Frame("copy transform", start)
+				return nil
+			}
+			source.InjectArtifact(specState, func(artifact abs.Artifact) {
+				transform.AddSource(artifact)
+			})
+			return transform
+		case parser.Token.Type == tok.T_LBRACE:
+			parser.Next()
+			initialSource := parser.ArtifactRef(arise, false)
+			if initialSource == nil {
+				parser.Frame("copy transform", start)
+				return nil
+			}
+			initialSource.InjectArtifact(specState, func(artifact abs.Artifact) {
+				transform.AddSource(artifact)
+			})
+			for parser.IsArtifactRef(false) {
+				nextSource := parser.ArtifactRef(arise, false)
+				if nextSource == nil {
+					parser.Frame("copy transform", start)
+					return nil
+				}
+				nextSource.InjectArtifact(specState, func(artifact abs.Artifact) {
+					transform.AddSource(artifact)
+				})
+			}
+			haveOpts := false
+			for {
+				switch {
+					case parser.IsKeyword("rebaseFrom"):
+						optloc := &parser.Token.Location
+						parser.Next()
+						if !parser.ExpectExp(tok.T_STRING, "pathname of base directory") {
+							parser.Frame("'rebaseFrom' copy option", optloc)
+							parser.Frame("copy transform", start)
+							return nil
+						}
+						transform.RebaseFrom = specState.Config.RealPath(parser.InterpolateString())
+						parser.Next()
+						haveOpts = true
+					case parser.IsKeyword("toDirectory"):
+						transform.DestinationIsDir = true
+						parser.Next()
+						haveOpts = true
+					case parser.Token.Type == tok.T_RBRACE:
+						parser.Next()
+						return transform
+					default:
+						if haveOpts {
+							parser.Die("copy option or '}'")
+						} else {
+							parser.Die("artifact reference, copy option or '}'")
+						}
+						parser.Frame("copy transform", start)
+						return nil
+				}
+			}
+		default:
+			parser.Die("artifact reference or '{'")
+			parser.Frame("copy transform", start)
+			return nil
+	}
+}
+
+func TopCopyTransform(parser *prs.Parser) abs.Transform {
+	transform := ParseCopyTransform(parser)
+	if transform != nil {
+		return transform
+	} else {
+		return nil
+	}
+}
