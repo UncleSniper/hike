@@ -173,6 +173,10 @@ func (xform *CopyTransform) TransformArise() *herr.AriseRef {
 	return xform.Arise
 }
 
+func (xform *CopyTransform) pathDescription(paths []string, base string) string {
+	return filepath.ToSlash(con.RelPath(con.GuessGroupArtifactNameNat(paths, base), xform.UIBase))
+}
+
 func (xform *CopyTransform) Plan(destination abs.Artifact, plan *abs.Plan) herr.BuildError {
 	return con.PlanMultiTransform(
 		xform,
@@ -203,8 +207,8 @@ func (xform *CopyTransform) Plan(destination abs.Artifact, plan *abs.Plan) herr.
 			}
 			step.Description = fmt.Sprintf(
 				"copy %s -> %s",
-				con.RelPath(con.GuessGroupArtifactName(srcPaths, xform.RebaseFrom), xform.UIBase),
-				con.RelPath(con.GuessGroupArtifactName(destPaths, xform.UIBase), xform.UIBase),
+				xform.pathDescription(srcPaths, xform.RebaseFrom),
+				xform.pathDescription(destPaths, xform.UIBase),
 			)
 			plan.AddStep(step)
 			return nil

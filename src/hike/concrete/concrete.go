@@ -619,21 +619,25 @@ func Attain(goal *abs.Goal, plan *abs.Plan) (err herr.BuildError) {
 
 var sepString = string([]rune{os.PathSeparator})
 
-func GuessFileArtifactName(path string, base string) string {
+func GuessFileArtifactNameNat(path string, base string) string {
 	rel, err := filepath.Rel(base, path)
 	if err == nil && strings.HasSuffix(path, sepString + rel) {
-		return filepath.ToSlash(rel)
+		return rel
 	} else {
-		return filepath.ToSlash(path)
+		return path
 	}
 }
 
-func GuessGroupArtifactName(paths []string, base string) string {
+func GuessFileArtifactName(path string, base string) string {
+	return filepath.ToSlash(GuessFileArtifactNameNat(path, base))
+}
+
+func GuessGroupArtifactNameNat(paths []string, base string) string {
 	switch len(paths) {
 		case 0:
-			return filepath.ToSlash(base)
+			return base
 		case 1:
-			return filepath.ToSlash(paths[0])
+			return paths[0]
 	}
 	var suffix []rune
 	var prefix string
@@ -670,7 +674,11 @@ func GuessGroupArtifactName(paths []string, base string) string {
 	} else {
 		star = "*"
 	}
-	return filepath.ToSlash(filepath.Join(base, star + string(suffix[suffixOffset:])))
+	return filepath.Join(base, star + string(suffix[suffixOffset:]))
+}
+
+func GuessGroupArtifactName(paths []string, base string) string {
+	return filepath.ToSlash(GuessGroupArtifactNameNat(paths, base))
 }
 
 func RebasePath(oldPath, fromBase, toBase string) string {
