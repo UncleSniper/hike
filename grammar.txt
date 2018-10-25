@@ -82,4 +82,6 @@ regex_file_opt	::= 'key' STRING
 					| 'rebaseTo' STRING
 
 transform_fact	::= exec_xfrm_fact
+					| copy_xfrm_fact
 exec_xfrm_fact	::= 'exec' STRING '{' command_word+ exec_option* '}'
+copy_xfrm_fact	::= 'copy' ('{' copy_option* '}')?

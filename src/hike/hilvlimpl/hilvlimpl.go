@@ -80,9 +80,18 @@ func (factory *CopyTransformFactory) NewTransform(
 	sources []abs.Artifact,
 	state *spc.State,
 ) (abs.Transform, herr.BuildError) {
-	//TODO
-	return nil, nil
+	xform := &gen.CopyTransform {
+		Sources: sources,
+		UIBase: state.Config.TopDir,
+		OwningProject: state.Config.EffectiveProjectName(),
+	}
+	xform.DestinationIsDir = factory.DestinationIsDir
+	xform.RebaseFrom = factory.RebaseFrom
+	xform.Arise = factory.Arise
+	return xform, nil
 }
+
+var _ hlv.TransformFactory = &CopyTransformFactory{}
 
 // ---------------------------------------- ArtifactFactory ----------------------------------------
 
