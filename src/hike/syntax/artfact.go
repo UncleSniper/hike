@@ -212,7 +212,7 @@ func ParseRegexFile(parser *prs.Parser) *hlm.RegexFileFactory {
 					parser.Expect(tok.T_RBRACE)
 					parser.Next()
 				default:
-					parser.Die("regexp file artifact factory option or '}'")
+					parser.Die("regexp file artifact factory option, transform factory or '}'")
 					parser.Frame("regexp file artifact factory", start)
 					return nil
 			}

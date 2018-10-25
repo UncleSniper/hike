@@ -89,3 +89,55 @@ func TopCommandTransformFactory(parser *prs.Parser) hlv.TransformFactory {
 		return nil
 	}
 }
+
+func ParseCopyTransformFactory(parser *prs.Parser) *hlm.CopyTransformFactory {
+	if !parser.ExpectKeyword("copy") {
+		return nil
+	}
+	start := &parser.Token.Location
+	parser.Next()
+	specState := parser.SpecState()
+	arise := &herr.AriseRef {
+		Text: "'copy' stanza",
+		Location: start,
+	}
+	if parser.Token.Type != tok.T_LBRACE {
+		return hlm.NewCopyTransformFactory(false, specState.Config.TopDir, arise)
+	}
+	parser.Next()
+	rebaseFrom := specState.Config.TopDir
+	toDirectory := false
+	for {
+		switch {
+			case parser.IsKeyword("rebaseFrom"):
+				optloc := &parser.Token.Location
+				parser.Next()
+				if !parser.ExpectExp(tok.T_STRING, "pathname of base directory") {
+					parser.Frame("'rebaseFrom' copy option", optloc)
+					parser.Frame("copy transform factory", start)
+					return nil
+				}
+				rebaseFrom = specState.Config.RealPath(parser.InterpolateString())
+				parser.Next()
+			case parser.IsKeyword("toDirectory"):
+				toDirectory = true
+				parser.Next()
+			case parser.Token.Type == tok.T_RBRACE:
+				parser.Next()
+				return hlm.NewCopyTransformFactory(toDirectory, rebaseFrom, arise)
+			default:
+				parser.Die("copy option or '}'")
+				parser.Frame("copy transform factory", start)
+				return nil
+		}
+	}
+}
+
+func TopCopyTransformFactory(parser *prs.Parser) hlv.TransformFactory {
+	factory := ParseCopyTransformFactory(parser)
+	if factory != nil {
+		return factory
+	} else {
+		return nil
+	}
+}
