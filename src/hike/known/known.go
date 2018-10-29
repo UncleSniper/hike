@@ -25,6 +25,7 @@ func RegisterCoreStructures(known *prs.KnownStructures) {
 	// TransformParser
 	known.RegisterTransformParser("exec", syn.TopCommandTransform)
 	known.RegisterTransformParser("copy", syn.TopCopyTransform)
+	known.RegisterTransformParser("zip", syn.TopZipTransform)
 	// ArtifactSetParser
 	known.RegisterArtifactSetParser("each", syn.ParseArtifactEach)
 	known.RegisterArtifactSetParser("scandir", syn.ParseArtifactScanDir)

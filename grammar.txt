@@ -41,6 +41,7 @@ split_artifact	::= 'split' STRING? '{' artifact_ref artifact_ref '}'
 
 transform		::= exec_transform
 					| copy_transform
+					| zip_transform
 exec_transform	::= 'exec' STRING '{' command_word+ exec_option* x_artifact_ref* '}'
 command_word	::= STRING
 					| 'source'
@@ -52,6 +53,10 @@ copy_transform	::= 'copy' (artifact_ref | '{' copy_xform_body '}')
 copy_xform_body	::= artifact_ref+ copy_option*
 copy_option		::= 'rebaseFrom' STRING
 					| 'toDirectory'
+zip_transform	::= 'zip' STRING? '{' zip_piece* '}'
+zip_piece		::= 'piece' '{' zip_piece_opt* artifact_ref* '}'
+zip_piece_opt	::= 'from' STRING
+					| 'to' STRING
 
 artifact_set	::= artifact
 					| artifact_each

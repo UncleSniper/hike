@@ -1,6 +1,8 @@
 package syntax
 
 import (
+	"path"
+	"path/filepath"
 	herr "hike/error"
 	tok "hike/token"
 	prs "hike/parser"
@@ -192,6 +194,135 @@ func ParseCopyTransform(parser *prs.Parser) *gen.CopyTransform {
 
 func TopCopyTransform(parser *prs.Parser) abs.Transform {
 	transform := ParseCopyTransform(parser)
+	if transform != nil {
+		return transform
+	} else {
+		return nil
+	}
+}
+
+func ParseZipTransform(parser *prs.Parser) *gen.ZipTransform {
+	if !parser.ExpectKeyword("zip") {
+		return nil
+	}
+	start := &parser.Token.Location
+	parser.Next()
+	var description string
+	switch parser.Token.Type {
+		case tok.T_STRING:
+			description = parser.InterpolateString()
+			parser.Next()
+			if !parser.Expect(tok.T_LBRACE) {
+				parser.Frame("zip transform", start)
+				return nil
+			}
+		case tok.T_LBRACE:
+		default:
+			parser.Die("string (description) or '{'")
+			parser.Frame("zip transform", start)
+			return nil
+	}
+	parser.Next()
+	if len(description) == 0 {
+		description = "zip"
+	}
+	arise := &herr.AriseRef {
+		Text: "'zip' stanza",
+		Location: start,
+	}
+	transform := gen.NewZipTransform(description, arise, nil)
+	specState := parser.SpecState()
+	for {
+		switch {
+			case parser.IsKeyword("piece"):
+				pstart := &parser.Token.Location
+				parser.Next()
+				if !parser.Expect(tok.T_LBRACE) {
+					parser.Frame("zip piece", pstart)
+					parser.Frame("zip transform", start)
+					return nil
+				}
+				parser.Next()
+				var rebaseFrom, rebaseTo string
+			  pieceOpts:
+				for {
+					switch {
+						case parser.IsKeyword("from"):
+							optloc := &parser.Token.Location
+							parser.Next()
+							if !parser.ExpectExp(tok.T_STRING, "outer base directory") {
+								parser.Frame("'from' zip piece option", optloc)
+								parser.Frame("zip piece", pstart)
+								parser.Frame("zip transform", start)
+								return nil
+							}
+							rebaseFrom = specState.Config.RealPath(parser.InterpolateString())
+							parser.Next()
+						case parser.IsKeyword("to"):
+							optloc := &parser.Token.Location
+							parser.Next()
+							if !parser.ExpectExp(tok.T_STRING, "inner base directory") {
+								parser.Frame("'to' zip piece option", optloc)
+								parser.Frame("zip piece", pstart)
+								parser.Frame("zip transform", start)
+								return nil
+							}
+							rebaseTo = path.Clean(filepath.ToSlash(parser.InterpolateString()))
+							parser.Next()
+						default:
+							break pieceOpts
+					}
+				}
+				if len(rebaseFrom) == 0 {
+					rebaseFrom = specState.Config.TopDir
+				}
+				piece := &gen.ZipPiece {
+					RebaseFrom: rebaseFrom,
+					RebaseTo: rebaseTo,
+				}
+				haveSources := false
+			  pieceArts:
+				for {
+					switch {
+						case parser.IsArtifactRef(false):
+							aref := parser.ArtifactRef(arise, false)
+							if aref == nil {
+								parser.Frame("zip piece", pstart)
+								parser.Frame("zip transform", start)
+								return nil
+							}
+							aref.InjectArtifact(specState, func(artifact abs.Artifact) {
+								piece.AddSource(artifact)
+							})
+							haveSources = true
+						case parser.Token.Type == tok.T_RBRACE:
+							parser.Next()
+							transform.AddPiece(piece)
+							break pieceArts
+						default:
+							if haveSources {
+								parser.Die("artifact reference or '}'")
+							} else {
+								parser.Die("zip piece option, artifact reference or '}'")
+							}
+							parser.Frame("zip piece", pstart)
+							parser.Frame("zip transform", start)
+							return nil
+					}
+				}
+			case parser.Token.Type == tok.T_RBRACE:
+				parser.Next()
+				return transform
+			default:
+				parser.Die("zip piece or '}'")
+				parser.Frame("zip transform", start)
+				return nil
+		}
+	}
+}
+
+func TopZipTransform(parser *prs.Parser) abs.Transform {
+	transform := ParseZipTransform(parser)
 	if transform != nil {
 		return transform
 	} else {

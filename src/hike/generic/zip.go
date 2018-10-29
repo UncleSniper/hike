@@ -145,7 +145,7 @@ func (emitter *ZipEmitter) Die() {
 
 type ZipStep struct {
 	con.StepBase
-	Pieces []ZipPiece
+	Pieces []*ZipPiece
 	Destination abs.Artifact
 	Arise *herr.AriseRef
 }
@@ -223,9 +223,26 @@ type ZipPiece struct {
 	RebaseTo string
 }
 
+func (piece *ZipPiece) AddSource(source abs.Artifact) {
+	piece.Sources = append(piece.Sources, source)
+}
+
 type ZipTransform struct {
 	con.TransformBase
-	Pieces []ZipPiece
+	Pieces []*ZipPiece
+}
+
+func NewZipTransform(description string, arise *herr.AriseRef, pieces []*ZipPiece) *ZipTransform {
+	transform := &ZipTransform {
+		Pieces: pieces,
+	}
+	transform.Description = description
+	transform.Arise = arise
+	return transform
+}
+
+func (xform *ZipTransform) AddPiece(piece *ZipPiece) {
+	xform.Pieces = append(xform.Pieces, piece)
 }
 
 func (xform *ZipTransform) Plan(destination abs.Artifact, plan *abs.Plan) herr.BuildError {
@@ -241,15 +258,53 @@ func (xform *ZipTransform) Plan(destination abs.Artifact, plan *abs.Plan) herr.B
 		destination,
 		plan,
 		func() herr.BuildError {
-			//TODO
+			step := &ZipStep {
+				Pieces: xform.Pieces,
+				Destination: destination,
+				Arise: xform.Arise,
+			}
+			step.Description = xform.Description + " " + destination.DisplayName()
+			plan.AddStep(step)
 			return nil
 		},
 	)
 }
 
 func (xform *ZipTransform) DumpTransform(level uint) error {
-	//TODO
-	return nil
+	prn := herr.NewErrorPrinter()
+	prn.Out = os.Stdout
+	prn.Level(level)
+	prn.Print("zip ")
+	con.PrintErrorString(prn, xform.Description)
+	prn.Print(" {")
+	for _, piece := range xform.Pieces {
+		prn.Println()
+		prn.Indent(1)
+		prn.Println("piece {")
+		prn.Indent(2)
+		prn.Print("from ")
+		con.PrintErrorString(prn, piece.RebaseFrom)
+		if len(piece.RebaseTo) > 0 {
+			prn.Println()
+			prn.Indent(2)
+			prn.Print("to ")
+			con.PrintErrorString(prn, piece.RebaseTo)
+		}
+		for _, source := range piece.Sources {
+			prn.Println()
+			prn.Indent(2)
+			con.PrintErrorString(prn, source.ArtifactKey().Unified())
+		}
+		prn.Println()
+		prn.Indent(1)
+		prn.Print("}")
+	}
+	if len(xform.Pieces) > 0 {
+		prn.Println()
+		prn.Indent(0)
+	}
+	prn.Print("}")
+	return prn.Done()
 }
 
 var _ abs.Transform = &ZipTransform{}
