@@ -3,6 +3,7 @@ package generic
 import (
 	"os"
 	"io"
+	"fmt"
 	"path"
 	"regexp"
 	"archive/zip"
@@ -274,7 +275,12 @@ func (xform *ZipTransform) Plan(destination abs.Artifact, plan *abs.Plan) herr.B
 				Destination: destination,
 				Arise: xform.Arise,
 			}
-			step.Description = xform.Description + " " + destination.DisplayName()
+			step.Description = fmt.Sprintf(
+				"[%s] %s %s",
+				destination.ArtifactKey().Project,
+				xform.Description,
+				destination.DisplayName(),
+			)
 			plan.AddStep(step)
 			return nil
 		},
