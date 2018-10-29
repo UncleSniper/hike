@@ -2,6 +2,7 @@ package syntax
 
 import (
 	"path"
+	"regexp"
 	"path/filepath"
 	herr "hike/error"
 	tok "hike/token"
@@ -9,6 +10,7 @@ import (
 	gen "hike/generic"
 	abs "hike/abstract"
 	csx "hike/comsyntax"
+	hlm "hike/hilvlimpl"
 )
 
 func ParseCommandTransform(parser *prs.Parser) *gen.MultiCommandTransform {
@@ -243,7 +245,8 @@ func ParseZipTransform(parser *prs.Parser) *gen.ZipTransform {
 					return nil
 				}
 				parser.Next()
-				var rebaseFrom, rebaseTo string
+				var rebaseFrom, rebaseTo, basenameRegexText, basenameReplacement string
+				var basenameRegex *regexp.Regexp
 			  pieceOpts:
 				for {
 					switch {
@@ -269,6 +272,41 @@ func ParseZipTransform(parser *prs.Parser) *gen.ZipTransform {
 							}
 							rebaseTo = path.Clean(filepath.ToSlash(parser.InterpolateString()))
 							parser.Next()
+						case parser.IsKeyword("rename"):
+							optloc := &parser.Token.Location
+							parser.Next()
+							if !parser.ExpectExp(tok.T_STRING, "basename regex") {
+								parser.Frame("'rename' zip piece option", optloc)
+								parser.Frame("zip piece", pstart)
+								parser.Frame("zip transform", start)
+								return nil
+							}
+							var rerr error
+							basenameRegexText = parser.InterpolateString()
+							basenameRegex, rerr = regexp.Compile(basenameRegexText)
+							if rerr != nil {
+								parser.Fail(&hlm.IllegalRegexError {
+									Regex: basenameRegexText,
+									LibError: rerr,
+									PatternArise: &herr.AriseRef {
+										Text: "basename regex",
+										Location: &parser.Token.Location,
+									},
+								})
+								parser.Frame("'rename' zip piece option", optloc)
+								parser.Frame("zip piece", pstart)
+								parser.Frame("zip transform", start)
+								return nil
+							}
+							parser.Next()
+							if !parser.ExpectExp(tok.T_STRING, "basename replacement") {
+								parser.Frame("'rename' zip piece option", optloc)
+								parser.Frame("zip piece", pstart)
+								parser.Frame("zip transform", start)
+								return nil
+							}
+							basenameReplacement = parser.InterpolateString()
+							parser.Next()
 						default:
 							break pieceOpts
 					}
@@ -279,6 +317,9 @@ func ParseZipTransform(parser *prs.Parser) *gen.ZipTransform {
 				piece := &gen.ZipPiece {
 					RebaseFrom: rebaseFrom,
 					RebaseTo: rebaseTo,
+					BasenameRegex: basenameRegex,
+					BasenameRegexText: basenameRegexText,
+					BasenameReplacement: basenameReplacement,
 				}
 				haveSources := false
 			  pieceArts:

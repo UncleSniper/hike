@@ -4,6 +4,7 @@ import (
 	"os"
 	"io"
 	"path"
+	"regexp"
 	"archive/zip"
 	"path/filepath"
 	herr "hike/error"
@@ -189,6 +190,13 @@ func(step *ZipStep) Perform() herr.BuildError {
 		for _, src := range srcPaths {
 			srcTail := filepath.ToSlash(con.ForceToRelativeAndRebase(src, piece.RebaseFrom))
 			destTail := filepath.ToSlash(piece.RebaseTo) + path.Clean("/" + srcTail)
+			if piece.BasenameRegex != nil {
+				destDirname, destBasename := path.Split(path.Clean(destTail))
+				if len(destBasename) > 0 {
+					newTail := piece.BasenameRegex.ReplaceAllString(destBasename, piece.BasenameReplacement)
+					destTail = destDirname + newTail
+				}
+			}
 			emitter.EmitFile(
 				destTail,
 				func(into io.Writer) herr.BuildError {
@@ -221,6 +229,9 @@ type ZipPiece struct {
 	Sources []abs.Artifact
 	RebaseFrom string
 	RebaseTo string
+	BasenameRegex *regexp.Regexp
+	BasenameRegexText string
+	BasenameReplacement string
 }
 
 func (piece *ZipPiece) AddSource(source abs.Artifact) {
@@ -289,6 +300,14 @@ func (xform *ZipTransform) DumpTransform(level uint) error {
 			prn.Indent(2)
 			prn.Print("to ")
 			con.PrintErrorString(prn, piece.RebaseTo)
+		}
+		if piece.BasenameRegex != nil {
+			prn.Println()
+			prn.Indent(2)
+			prn.Print("rename ")
+			con.PrintErrorString(prn, piece.BasenameRegexText)
+			prn.Print(" ")
+			con.PrintErrorString(prn, piece.BasenameReplacement)
 		}
 		for _, source := range piece.Sources {
 			prn.Println()

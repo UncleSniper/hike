@@ -57,6 +57,7 @@ zip_transform	::= 'zip' STRING? '{' zip_piece* '}'
 zip_piece		::= 'piece' '{' zip_piece_opt* artifact_ref* '}'
 zip_piece_opt	::= 'from' STRING
 					| 'to' STRING
+					| 'rename' STRING STRING
 
 artifact_set	::= artifact
 					| artifact_each

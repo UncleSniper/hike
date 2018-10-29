@@ -104,10 +104,11 @@ func TopStaticFile(parser *prs.Parser) hlv.ArtifactFactory {
 }
 
 func manglePathRegex(parser *prs.Parser) *regexp.Regexp {
-	pathRegex, rerr := regexp.Compile(parser.Token.Text)
+	spec := parser.InterpolateString()
+	pathRegex, rerr := regexp.Compile(spec)
 	if rerr != nil {
 		parser.Fail(&hlm.IllegalRegexError {
-			Regex: parser.InterpolateString(),
+			Regex: spec,
 			LibError: rerr,
 			PatternArise: &herr.AriseRef {
 				Text: "path regex",
