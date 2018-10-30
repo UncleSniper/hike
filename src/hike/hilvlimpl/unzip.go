@@ -294,8 +294,60 @@ func (xform *UnzipTransform) Plan(destination abs.Artifact, plan *abs.Plan) herr
 }
 
 func (xform *UnzipTransform) DumpTransform(level uint) error {
-	//TODO
-	return nil
+	prn := herr.NewErrorPrinter()
+	prn.Out = os.Stdout
+	prn.Level(level)
+	prn.Print("unzip ")
+	con.PrintErrorString(prn, xform.Description)
+	prn.Print(" {")
+	for _, archive := range xform.Sources {
+		prn.Println()
+		prn.Indent(1)
+		con.PrintErrorString(prn, archive.ArtifactKey().Unified())
+	}
+	for _, valve := range xform.Valves {
+		prn.Println()
+		prn.Indent(1)
+		prn.Print("valve {")
+		haveOpts := false
+		if len(valve.RebaseFrom) > 0 {
+			prn.Println()
+			prn.Indent(2)
+			prn.Print("from ")
+			con.PrintErrorString(prn, valve.RebaseFrom)
+			haveOpts = true
+		}
+		if len(valve.RebaseTo) > 0 {
+			prn.Println()
+			prn.Indent(2)
+			prn.Print("to ")
+			con.PrintErrorString(prn, valve.RebaseTo)
+			haveOpts = true
+		}
+		if valve.BasenameRegex != nil {
+			prn.Println()
+			prn.Indent(2)
+			prn.Print("rename ")
+			con.PrintErrorString(prn, valve.BasenameRegexText)
+			prn.Print(" ")
+			con.PrintErrorString(prn, valve.BasenameReplacement)
+			haveOpts = true
+		}
+		for _, filter := range valve.Filters {
+			prn.Println()
+			prn.Indent(2)
+			prn.Inject(filter.DumpFilter, 2)
+		}
+		if haveOpts {
+			prn.Println()
+			prn.Indent(1)
+		}
+		prn.Print("}")
+	}
+	prn.Println()
+	prn.Indent(0)
+	prn.Print("}")
+	return prn.Done()
 }
 
 var _ abs.Transform = &UnzipTransform{}

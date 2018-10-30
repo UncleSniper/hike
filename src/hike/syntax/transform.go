@@ -370,3 +370,164 @@ func TopZipTransform(parser *prs.Parser) abs.Transform {
 		return nil
 	}
 }
+
+func ParseUnzipTransform(parser *prs.Parser) *hlm.UnzipTransform {
+	if !parser.ExpectKeyword("unzip") {
+		return nil
+	}
+	start := &parser.Token.Location
+	parser.Next()
+	var description string
+	switch parser.Token.Type {
+		case tok.T_STRING:
+			description = parser.InterpolateString()
+			parser.Next()
+			if !parser.Expect(tok.T_LBRACE) {
+				parser.Frame("unzip transform", start)
+				return nil
+			}
+		case tok.T_LBRACE:
+		default:
+			parser.Die("string (description) or '{'")
+			parser.Frame("unzip transform", start)
+			return nil
+	}
+	parser.Next()
+	if len(description) == 0 {
+		description = "unzip"
+	}
+	arise := &herr.AriseRef {
+		Text: "'unzip' stanza",
+		Location: start,
+	}
+	specState := parser.SpecState()
+	transform := hlm.NewUnzipTransform(description, arise, nil, specState.Config.TopDir, nil)
+	for {
+		aref := parser.ArtifactRef(arise, false)
+		if aref == nil {
+			parser.Frame("unzip transform", start)
+			return nil
+		}
+		aref.InjectArtifact(specState, func(artifact abs.Artifact) {
+			transform.AddArchive(artifact)
+		})
+		if !parser.IsArtifactRef(false) {
+			break
+		}
+	}
+	haveValves := false
+	for parser.IsKeyword("valve") {
+		vstart := &parser.Token.Location
+		parser.Next()
+		if !parser.Expect(tok.T_LBRACE) {
+			parser.Frame("unzip valve", vstart)
+			parser.Frame("unzip transform", start)
+			return nil
+		}
+		parser.Next();
+		valve := &hlm.UnzipValve{}
+	  valveOpts:
+		for {
+			switch {
+				case parser.Token.Type == tok.T_RBRACE:
+					parser.Next()
+					transform.AddValve(valve)
+					haveValves = true
+					break valveOpts
+				case parser.IsKeyword("from"):
+					optloc := &parser.Token.Location
+					parser.Next()
+					if !parser.ExpectExp(tok.T_STRING, "inner base directory") {
+						parser.Frame("'from' unzip valve option", optloc)
+						parser.Frame("unzip valve", vstart)
+						parser.Frame("unzip transform", start)
+						return nil
+					}
+					valve.RebaseFrom = path.Clean("/" + filepath.ToSlash(parser.InterpolateString()))[1:]
+					parser.Next()
+				case parser.IsKeyword("to"):
+					optloc := &parser.Token.Location
+					parser.Next()
+					if !parser.ExpectExp(tok.T_STRING, "outer base directory") {
+						parser.Frame("'to' unzip valve option", optloc)
+						parser.Frame("unzip valve", vstart)
+						parser.Frame("unzip transform", start)
+						return nil
+					}
+					valve.RebaseTo = specState.Config.RealPath(parser.InterpolateString())
+					parser.Next()
+				case parser.IsKeyword("rename"):
+					optloc := &parser.Token.Location
+					parser.Next()
+					if !parser.ExpectExp(tok.T_STRING, "basename regex") {
+						parser.Frame("'rename' unzip valve option", optloc)
+						parser.Frame("unzip valve", vstart)
+						parser.Frame("unzip transform", start)
+						return nil
+					}
+					var rerr error
+					valve.BasenameRegexText = parser.InterpolateString()
+					valve.BasenameRegex, rerr = regexp.Compile(valve.BasenameRegexText)
+					if rerr != nil {
+						parser.Fail(&hlm.IllegalRegexError {
+							Regex: valve.BasenameRegexText,
+							LibError: rerr,
+							PatternArise: &herr.AriseRef {
+								Text: "basename regex",
+								Location: &parser.Token.Location,
+							},
+						})
+						parser.Frame("'rename' unzip valve option", optloc)
+						parser.Frame("unzip valve", vstart)
+						parser.Frame("unzip transform", start)
+						return nil
+					}
+					parser.Next()
+					if !parser.ExpectExp(tok.T_STRING, "basename replacement") {
+						parser.Frame("'rename' unzip valve option", optloc)
+						parser.Frame("unzip valve", vstart)
+						parser.Frame("unzip transform", start)
+						return nil
+					}
+					valve.BasenameReplacement = parser.InterpolateString()
+					parser.Next()
+				case parser.IsFileFilter():
+					filter := parser.FileFilter()
+					if filter == nil {
+						parser.Frame("unzip valve", vstart)
+						parser.Frame("unzip transform", start)
+						return nil
+					}
+					valve.AddFilter(filter)
+				default:
+					parser.Die("unzip valve option or file filter")
+					parser.Frame("unzip valve", vstart)
+					parser.Frame("unzip transform", start)
+					return nil
+			}
+		}
+	}
+	if parser.Token.Type != tok.T_RBRACE {
+		if haveValves {
+			parser.Die("unzip valve or '}'")
+		} else {
+			parser.Die("artifact reference, unzip valve or '}'")
+		}
+		parser.Frame("unzip transform", start)
+		return nil
+	}
+	parser.Next()
+	if !haveValves {
+		transform.AddValve(&hlm.UnzipValve{})
+	}
+	return transform
+}
+
+func TopUnzipTransform(parser *prs.Parser) abs.Transform {
+	transform := ParseUnzipTransform(parser)
+	if transform != nil {
+		return transform
+	} else {
+		return nil
+	}
+}
