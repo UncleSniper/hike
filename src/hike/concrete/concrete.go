@@ -440,6 +440,127 @@ func NewGroup (
 	return artifact
 }
 
+type DirectoryArtifact struct {
+	ArtifactBase
+	Path string
+	GeneratingTransform abs.Transform
+}
+
+func (artifact *DirectoryArtifact) DisplayName() string {
+	if len(artifact.Name) > 0 {
+		return artifact.Name
+	} else {
+		return artifact.Path
+	}
+}
+
+func (artifact *DirectoryArtifact) PathNames(sink []string) ([]string, herr.BuildError) {
+	return append(sink, artifact.Path), nil
+}
+
+func (artifact *DirectoryArtifact) EarliestModTime(arise *herr.AriseRef) (
+	result time.Time,
+	err herr.BuildError,
+	missing bool,
+) {
+	info, oserr := os.Stat(artifact.Path)
+	if oserr == nil {
+		result = info.ModTime()
+	} else {
+		missing = os.IsNotExist(oserr)
+		if !missing {
+			err = &CannotStatError {
+				Path: artifact.Path,
+				OSError: oserr,
+				OperationArise: arise,
+			}
+		}
+		return
+	}
+	var have bool
+	oserr = filepath.Walk(artifact.Path, func(path string, info os.FileInfo, inerr error) error {
+		if inerr != nil {
+			return inerr
+		}
+		//TODO
+		return nil
+	})
+	if oserr != nil {
+		err = &CannotStatError {
+			Path: artifact.Path,
+			OSError: oserr,
+			OperationArise: arise,
+		}
+	}
+	return
+}
+
+func (artifact *DirectoryArtifact) LatestModTime(arise *herr.AriseRef) (time.Time, herr.BuildError, bool) {
+	//TODO
+	return time.Now(), nil, false
+}
+
+func (artifact *DirectoryArtifact) Flatten() herr.BuildError {
+	return nil
+}
+
+func (artifact *DirectoryArtifact) Require(plan *abs.Plan, requireArise *herr.AriseRef) (err herr.BuildError) {
+	if plan.AlreadyUpToDate(artifact) {
+		return
+	}
+	if artifact.GeneratingTransform != nil {
+		err = artifact.GeneratingTransform.Plan(artifact, plan)
+		if err != nil {
+			err.AddErrorFrame(&RequireArtifactFrame {
+				Artifact: artifact,
+			})
+		}
+	} else {
+		exists, nerr := FileExists(artifact.Path, requireArise)
+		switch {
+			case nerr != nil:
+				err = nerr
+				err.AddErrorFrame(&RequireArtifactFrame {
+					Artifact: artifact,
+				})
+			case !exists:
+				err = &NoGeneratorError {
+					Artifact: artifact,
+					RequireArise: requireArise,
+				}
+		}
+	}
+	if err != nil {
+		plan.BroughtUpToDate(artifact)
+	}
+	return
+}
+
+func (artifact *DirectoryArtifact) DumpArtifact(level uint) error {
+	//TODO
+	return nil
+}
+
+var _ abs.Artifact = &DirectoryArtifact{}
+
+func NewDirectory(
+	key abs.ArtifactKey,
+	name string,
+	arise *herr.AriseRef,
+	path string,
+	generatingTransform abs.Transform,
+) *DirectoryArtifact {
+	artifact := &DirectoryArtifact {
+		Path: path,
+		GeneratingTransform: generatingTransform,
+	}
+	artifact.Key = key
+	artifact.ID = abs.NextArtifactID()
+	artifact.Name = name
+	artifact.Arise = arise
+	return artifact
+}
+
 // ---------------------------------------- Step ----------------------------------------
 
 type StepBase struct {
