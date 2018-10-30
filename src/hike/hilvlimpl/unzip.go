@@ -107,7 +107,7 @@ func (step *UnzipStep) Perform() herr.BuildError {
 				} else {
 					newBasename = valve.BasenameRegex.ReplaceAllString(fwrap.Basename, valve.BasenameReplacement)
 				}
-				if strings.HasPrefix(fwrap.EnclosingDirectory, valve.RebaseFrom + "/") {
+				if strings.HasPrefix(fwrap.EnclosingDirectory + "/", valve.RebaseFrom + "/") {
 					tail := fwrap.EnclosingDirectory[len(valve.RebaseFrom):]
 					newDir = filepath.Join(valve.RebaseTo, filepath.FromSlash(tail))
 				} else {
@@ -125,18 +125,35 @@ func (step *UnzipStep) Perform() herr.BuildError {
 						return step.fail(archive, nerr)
 					}
 				} else {
+					zrd, nerr := zfile.Open()
+					if nerr != nil {
+						inf.Close()
+						return step.fail(archive, nerr)
+					}
 					err = con.MakeEnclosingDirectories(newPath, step.Arise)
 					if err != nil {
+						zrd.Close()
 						inf.Close()
 						return err
 					}
 					outf, nerr := os.OpenFile(newPath, os.O_WRONLY | os.O_CREATE | os.O_TRUNC, 0644)
 					if nerr != nil {
+						zrd.Close()
 						inf.Close()
 						return step.fail(archive, nerr)
 					}
-					_, nerr = io.Copy(outf, inf)
-					outf.Close()
+					_, nerr = io.Copy(outf, zrd)
+					if nerr != nil {
+						zrd.Close()
+						inf.Close()
+						return step.fail(archive, nerr)
+					}
+					nerr = zrd.Close()
+					if nerr != nil {
+						inf.Close()
+						return step.fail(archive, nerr)
+					}
+					nerr = outf.Close()
 					if nerr != nil {
 						inf.Close()
 						return step.fail(archive, nerr)

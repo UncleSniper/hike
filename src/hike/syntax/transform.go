@@ -454,7 +454,7 @@ func ParseUnzipTransform(parser *prs.Parser) *hlm.UnzipTransform {
 						parser.Frame("unzip transform", start)
 						return nil
 					}
-					valve.RebaseTo = specState.Config.RealPath(parser.InterpolateString())
+					valve.RebaseTo = filepath.Clean(filepath.FromSlash(parser.InterpolateString()))
 					parser.Next()
 				case parser.IsKeyword("rename"):
 					optloc := &parser.Token.Location
