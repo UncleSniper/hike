@@ -147,15 +147,26 @@ type State struct {
 	pendingResolutions []PendingResolver
 	stringVars map[string]string
 	intVars map[string]int
+	Parent *State
+	ResolveState *ResolveState
+	DependKey string
 }
 
-func NewState(config *Config) *State {
+func NewState(config *Config, parent *State, dependKey string) *State {
+	if parent == nil {
+		dependKey = ""
+	}
 	state := &State {
 		Config: config,
 		goals: make(map[string]*abs.Goal),
 		artifacts: make(map[string]abs.Artifact),
 		stringVars: make(map[string]string),
 		intVars: make(map[string]int),
+		Parent: parent,
+		ResolveState: &ResolveState {
+			dependencies: make(map[string]*DependState),
+		},
+		DependKey: dependKey,
 	}
 	state.stringVars["$"] = "$"
 	state.updateHikefileVars()
@@ -304,6 +315,39 @@ func (state *State) InterpolateString(src string) string {
 	return res
 }
 
+func (state *State) DependStateFor(dependKey string, create bool) *DependState {
+	ds := state.ResolveState.dependencies[dependKey]
+	if ds != nil {
+		return ds
+	}
+	if !create {
+		return nil
+	}
+	var level string
+	if state.Parent == nil {
+		level = "toplevel project"
+	} else {
+		level = fmt.Sprintf("project '%s'", dependKey)
+	}
+	ds = &DependState {
+		ProjectLevel: level,
+	}
+	state.ResolveState.dependencies[dependKey] = ds
+	return ds
+}
+
+func (state *State) PushDependenciesUp() {
+	if state.Parent == nil {
+		return
+	}
+	for dependKey, ds := range state.ResolveState.dependencies {
+		if ds.Repository != nil || len(ds.Children) > 0 {
+			pds := state.Parent.DependStateFor(dependKey, true)
+			pds.AddChild(ds)
+		}
+	}
+}
+
 // ---------------------------------------- Config ----------------------------------------
 
 type Config struct {
@@ -327,4 +371,58 @@ func (config *Config) RealPath(path string) string {
 	} else {
 		return filepath.Join(config.TopDir, path)
 	}
+}
+
+// ---------------------------------------- ResolveState ----------------------------------------
+
+type ResolveState struct {
+	dependencies map[string]*DependState
+}
+
+type DependState struct {
+	ProjectLevel string
+	Repository Repository
+	Children []*DependState
+}
+
+func (state *DependState) AddChild(child *DependState) {
+	state.Children = append(state.Children, child)
+}
+
+// ---------------------------------------- VersionRef ----------------------------------------
+
+const (
+	VRCMP_LESS = iota
+	VRCMP_EQUAL
+	VRCMP_GREATER
+	VRCMP_INCOMPARABLE
+)
+
+func AreVersionsComparable(cmpResult int) bool {
+	switch cmpResult {
+		case VRCMP_LESS, VRCMP_EQUAL, VRCMP_GREATER:
+			return true
+		default:
+			return false
+	}
+}
+
+type VersionRef interface {
+	VersionString() string
+	VersionType() string
+	CompareToVersion(other VersionRef) (int, error)
+}
+
+// ---------------------------------------- Repository ----------------------------------------
+
+type Repository interface {
+	RepoDescription() string
+	InternVersion(specifier string, arise *herr.AriseRef) (VersionRef, herr.BuildError)
+	AcquireSnapshot(version VersionRef) (Snapshot, herr.BuildError)
+}
+
+type Snapshot interface {
+	OriginRepo() Repository
+	SnapshotVersion() VersionRef
+	DependOnArtifact(artifactKey string) (abs.Artifact, herr.BuildError)
 }

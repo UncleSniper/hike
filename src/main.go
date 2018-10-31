@@ -108,7 +108,7 @@ func main() {
 		TopDir: topDir,
 		CurrentHikefile: hikefilePath,
 	}
-	rootState := spc.NewState(config)
+	rootState := spc.NewState(config, nil, "")
 	knownStructures := prs.NewKnownStructures()
 	knw.RegisterAllKnownStructures(knownStructures)
 	// compile hikefile
