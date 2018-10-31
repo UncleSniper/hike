@@ -100,12 +100,117 @@ func ParseFileArtifact(parser *prs.Parser) *con.FileArtifact {
 			return file
 		default:
 			parser.Die("string (pathname) or '{'")
+			parser.Frame("file artifact", start)
 			return nil
 	}
 }
 
 func TopFileArtifact(parser *prs.Parser) abs.Artifact {
 	artifact := ParseFileArtifact(parser)
+	if artifact != nil {
+		return artifact
+	} else {
+		return nil
+	}
+}
+
+func ParseDirectoryArtifact(parser *prs.Parser) *con.DirectoryArtifact {
+	if !parser.ExpectKeyword("directory") {
+		return nil
+	}
+	start := &parser.Token.Location
+	parser.Next()
+	if !parser.ExpectExp(tok.T_STRING, "artifact key") {
+		parser.Frame("directory artifact", start)
+		return nil
+	}
+	config := parser.SpecState().Config
+	key := prs.SplitArtifactKey(parser.InterpolateString(), config)
+	parser.Next()
+	arise := &herr.AriseRef {
+		Text: "'directory' stanza",
+		Location: start,
+	}
+	specState := parser.SpecState()
+	switch parser.Token.Type {
+		case tok.T_STRING:
+			path := specState.Config.RealPath(parser.InterpolateString())
+			parser.Next()
+			directory := con.NewDirectory(*key, con.GuessFileArtifactName(path, config.TopDir), arise, path, nil)
+			dup := parser.SpecState().RegisterArtifact(directory, arise)
+			if dup != nil {
+				parser.Fail(dup)
+				return nil
+			}
+			return directory
+		case tok.T_LBRACE:
+			parser.Next()
+			if !parser.ExpectExp(tok.T_STRING, "pathname") {
+				parser.Frame("directory artifact", start)
+				return nil
+			}
+			path := specState.Config.RealPath(parser.InterpolateString())
+			parser.Next()
+			name := ""
+			haveName := false
+			if parser.IsKeyword("name") {
+				location := &parser.Token.Location
+				parser.Next()
+				if !parser.ExpectExp(tok.T_STRING, "artifact name") {
+					parser.Frame("directory artifact 'name' option", location)
+					parser.Frame("directory artifact", start)
+					return nil
+				}
+				name = parser.InterpolateString()
+				parser.Next()
+				haveName = true
+			} else {
+				name = con.GuessFileArtifactName(path, config.TopDir)
+			}
+			var transform abs.Transform
+			haveTransform := false
+			if parser.IsTransform() {
+				transform = parser.Transform()
+				if transform == nil {
+					parser.Frame("directory artifact", start)
+					return nil
+				}
+				haveTransform = true
+			}
+			if parser.Token.Type != tok.T_RBRACE {
+				if haveName {
+					if haveTransform {
+						parser.Die("'}'")
+					} else {
+						parser.Die("transform or '}'")
+					}
+				} else {
+					if haveTransform {
+						parser.Die("'name' or '}'")
+					} else {
+						parser.Die("'name', transform or '}'")
+					}
+				}
+				parser.Frame("directory artifact", start)
+				return nil
+			}
+			parser.Next()
+			directory := con.NewDirectory(*key, name, arise, path, transform)
+			dup := parser.SpecState().RegisterArtifact(directory, arise)
+			if dup != nil {
+				parser.Fail(dup)
+				return nil
+			}
+			return directory
+		default:
+			parser.Die("string (pathname) or '{'")
+			parser.Frame("directory artifact", start)
+			return nil
+	}
+}
+
+func TopDirectoryArtifact(parser *prs.Parser) abs.Artifact {
+	artifact := ParseDirectoryArtifact(parser)
 	if artifact != nil {
 		return artifact
 	} else {

@@ -18,6 +18,7 @@ func RegisterCoreStructures(known *prs.KnownStructures) {
 	known.RegisterActionParser("delete", syn.ParseDeleteAction)
 	// ArtifactParser
 	known.RegisterArtifactParser("file", syn.TopFileArtifact)
+	known.RegisterArtifactParser("directory", syn.TopDirectoryArtifact)
 	known.RegisterArtifactParser("artifacts", syn.TopGroupArtifact)
 	known.RegisterArtifactParser("pipeline", syn.ParsePipelineArtifact)
 	known.RegisterArtifactParser("tree", syn.TopTreeArtifact)
