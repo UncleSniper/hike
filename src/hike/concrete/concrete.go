@@ -458,7 +458,7 @@ func (artifact *DirectoryArtifact) PathNames(sink []string) ([]string, herr.Buil
 	return append(sink, artifact.Path), nil
 }
 
-func (artifact *DirectoryArtifact) EarliestModTime(arise *herr.AriseRef) (
+func (artifact *DirectoryArtifact) modTime(arise *herr.AriseRef, earliest bool) (
 	result time.Time,
 	err herr.BuildError,
 	missing bool,
@@ -482,7 +482,19 @@ func (artifact *DirectoryArtifact) EarliestModTime(arise *herr.AriseRef) (
 		if inerr != nil {
 			return inerr
 		}
-		//TODO
+		if info.IsDir() {
+			return nil
+		}
+		chmod := info.ModTime()
+		switch {
+			case !have:
+				result = chmod
+				have = true
+			case earliest && result.After(chmod):
+				result = chmod
+			case !earliest && chmod.After(result):
+				result = chmod
+		}
 		return nil
 	})
 	if oserr != nil {
@@ -495,9 +507,12 @@ func (artifact *DirectoryArtifact) EarliestModTime(arise *herr.AriseRef) (
 	return
 }
 
+func (artifact *DirectoryArtifact) EarliestModTime(arise *herr.AriseRef) (time.Time, herr.BuildError, bool) {
+	return artifact.modTime(arise, true)
+}
+
 func (artifact *DirectoryArtifact) LatestModTime(arise *herr.AriseRef) (time.Time, herr.BuildError, bool) {
-	//TODO
-	return time.Now(), nil, false
+	return artifact.modTime(arise, false)
 }
 
 func (artifact *DirectoryArtifact) Flatten() herr.BuildError {
@@ -537,8 +552,27 @@ func (artifact *DirectoryArtifact) Require(plan *abs.Plan, requireArise *herr.Ar
 }
 
 func (artifact *DirectoryArtifact) DumpArtifact(level uint) error {
-	//TODO
-	return nil
+	prn := herr.NewErrorPrinter()
+	prn.Out = os.Stdout
+	prn.Level(level)
+	prn.Print("directory ")
+	PrintErrorString(prn, artifact.Key.Unified())
+	prn.Println(" {")
+	prn.Indent(1)
+	PrintErrorString(prn, artifact.Path)
+	prn.Println()
+	prn.Indent(1)
+	prn.Print("name ")
+	PrintErrorString(prn, artifact.Name)
+	prn.Println()
+	if artifact.GeneratingTransform != nil {
+		prn.Indent(1)
+		artifact.GeneratingTransform.DumpTransform(level + 1)
+		prn.Println()
+	}
+	prn.Indent(0)
+	prn.Print("}")
+	return prn.Done()
 }
 
 var _ abs.Artifact = &DirectoryArtifact{}

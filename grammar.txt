@@ -21,12 +21,15 @@ delete			::= 'delete' (STRING | x_artifact_ref)
 artifact_ref	::= STRING | artifact
 x_artifact_ref	::= 'artifact' STRING | artifact
 artifact		::= file_artifact
+					| dir_artifact
 					| group_artifact
 					| pipeline
 					| tree_artifact
 					| split_artifact
 file_artifact	::= 'file' STRING (STRING | '{' file_body '}')
 file_body		::= STRING ('name' STRING)? transform?
+dir_artifact	::= 'directory' STRING (STRING | '{' dir_body '}')
+dir_body		::= file_body
 group_artifact	::= 'artifacts' STRING '{' group_body '}'
 group_body		::= 'name' STRING artifact_ref*
 pipeline		::= 'pipeline' '{' pipeline_opt* artifact_set ('merge'? artifact_fact)* '}'
