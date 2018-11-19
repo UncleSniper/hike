@@ -424,5 +424,6 @@ type Repository interface {
 type Snapshot interface {
 	OriginRepo() Repository
 	SnapshotVersion() VersionRef
+	SnapshotRoot() string
 	DependOnArtifact(artifactKey string) (abs.Artifact, herr.BuildError)
 }
