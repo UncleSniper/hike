@@ -107,7 +107,10 @@ func (artifact *TreeArtifact) PathNames(sink []string) ([]string, herr.BuildErro
 	if err != nil {
 		return nil, err
 	}
-	return artifact.cachedPaths, nil
+	for _, path := range artifact.cachedPaths {
+		sink = append(sink, path)
+	}
+	return sink, nil
 }
 
 func (artifact *TreeArtifact) EarliestModTime(arise *herr.AriseRef) (time.Time, herr.BuildError, bool) {
