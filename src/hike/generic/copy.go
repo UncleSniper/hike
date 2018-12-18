@@ -207,7 +207,8 @@ func (xform *CopyTransform) Plan(destination abs.Artifact, plan *abs.Plan) herr.
 				Arise: xform.Arise,
 			}
 			step.Description = fmt.Sprintf(
-				"copy %s -> %s",
+				"[%s] copy %s -> %s",
+				destination.ArtifactKey().Project,
 				xform.pathDescription(srcPaths, xform.RebaseFrom),
 				xform.pathDescription(destPaths, xform.UIBase),
 			)

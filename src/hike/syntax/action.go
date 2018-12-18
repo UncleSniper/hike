@@ -107,6 +107,7 @@ func ParseDeleteAction(parser *prs.Parser) abs.Action {
 			action := &gen.DeletePathAction {
 				Path: path,
 				Base: config.TopDir,
+				Project: config.ProjectName,
 			}
 			action.Arise = arise
 			return action

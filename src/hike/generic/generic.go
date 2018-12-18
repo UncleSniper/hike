@@ -384,6 +384,7 @@ type DeletePathAction struct {
 	con.ActionBase
 	Path string
 	Base string
+	Project string
 }
 
 func (action *DeletePathAction) SimpleDescr() string {
@@ -409,7 +410,7 @@ type DeleteArtifactAction struct {
 }
 
 func (action *DeleteArtifactAction) SimpleDescr() string {
-	return "delete " + action.Artifact.DisplayName()
+	return fmt.Sprintf("[%s] delete %s", action.Artifact.ArtifactKey().Project, action.Artifact.DisplayName())
 }
 
 func (action *DeleteArtifactAction) Perform(plan *abs.Plan) herr.BuildError {
