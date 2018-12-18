@@ -253,7 +253,7 @@ func (artifact *FileArtifact) Require(plan *abs.Plan, requireArise *herr.AriseRe
 				}
 		}
 	}
-	if err != nil {
+	if err == nil {
 		plan.BroughtUpToDate(artifact)
 	}
 	return
@@ -545,7 +545,7 @@ func (artifact *DirectoryArtifact) Require(plan *abs.Plan, requireArise *herr.Ar
 				}
 		}
 	}
-	if err != nil {
+	if err == nil {
 		plan.BroughtUpToDate(artifact)
 	}
 	return
