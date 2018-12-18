@@ -396,7 +396,11 @@ func (action *DeletePathAction) Perform(plan *abs.Plan) herr.BuildError {
 		Path: action.Path,
 		DeleteArise: action.Arise,
 	}
-	step.Description = "delete " + con.GuessFileArtifactName(action.Path, action.Base)
+	step.Description = fmt.Sprintf(
+		"[%s] delete %s",
+		action.Project,
+		con.GuessFileArtifactName(action.Path, action.Base),
+	)
 	plan.AddStep(step)
 	return nil
 }
@@ -410,7 +414,7 @@ type DeleteArtifactAction struct {
 }
 
 func (action *DeleteArtifactAction) SimpleDescr() string {
-	return fmt.Sprintf("[%s] delete %s", action.Artifact.ArtifactKey().Project, action.Artifact.DisplayName())
+	return "delete " + action.Artifact.DisplayName()
 }
 
 func (action *DeleteArtifactAction) Perform(plan *abs.Plan) herr.BuildError {
@@ -418,7 +422,11 @@ func (action *DeleteArtifactAction) Perform(plan *abs.Plan) herr.BuildError {
 		Artifact: action.Artifact,
 		DeleteArise: action.Arise,
 	}
-	step.Description = "delete " + action.Artifact.DisplayName()
+	step.Description = fmt.Sprintf(
+		"[%s] delete %s",
+		action.Artifact.ArtifactKey().Project,
+		action.Artifact.DisplayName(),
+	)
 	plan.AddStep(step)
 	return nil
 }
