@@ -274,7 +274,7 @@ func (word *ArtifactCommandWord) RequireCommandWordArtifacts(
 	plan *abs.Plan,
 	arise *herr.AriseRef,
 ) herr.BuildError {
-	return nil
+	return word.Artifact.Require(plan, arise)
 }
 
 var _ CommandWord = &ArtifactCommandWord{}
