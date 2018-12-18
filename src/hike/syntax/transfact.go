@@ -6,6 +6,7 @@ import (
 	prs "hike/parser"
 	gen "hike/generic"
 	hlv "hike/hilevel"
+	abs "hike/abstract"
 	hlm "hike/hilvlimpl"
 	csx "hike/comsyntax"
 )
@@ -70,6 +71,15 @@ func ParseCommandTransformFactory(parser *prs.Parser) *hlm.CommandTransformFacto
 		},
 		func(level uint) error {
 			return gen.DumpCommandWords(words, level)
+		},
+		func(plan *abs.Plan, arise *herr.AriseRef) herr.BuildError {
+			for _, word := range words {
+				rerr := word.RequireCommandWordArtifacts(plan, arise)
+				if rerr != nil {
+					return rerr
+				}
+			}
+			return nil
 		},
 		loud,
 		suffixIsDestination,

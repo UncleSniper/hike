@@ -27,6 +27,7 @@ func NewCommandTransformFactory(
 	arise *herr.AriseRef,
 	commandLine gen.VariableCommandLine,
 	dumpCommandLine gen.CommandLineDumper,
+	requireCommandWords gen.CommandWordsRequirer,
 	loud bool,
 	suffixIsDestination bool,
 ) *CommandTransformFactory {
@@ -35,6 +36,7 @@ func NewCommandTransformFactory(
 	factory.Arise = arise
 	factory.CommandLine = commandLine
 	factory.DumpCommandLine = dumpCommandLine
+	factory.RequireCommandWords = requireCommandWords
 	factory.Loud = loud
 	factory.SuffixIsDestination = suffixIsDestination
 	return factory
