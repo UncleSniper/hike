@@ -15,9 +15,11 @@ include			::= 'include' 'ifExists'? STRING
 action			::= attain
 					| require
 					| delete
+					| exec_action
 attain			::= 'attain' NAME
 require			::= 'require' artifact_ref
 delete			::= 'delete' (STRING | x_artifact_ref)
+exec_action		::= 'exec' STRING '{' command_word+ exec_option* x_artifact_ref* '}'
 
 artifact_ref	::= STRING | artifact
 x_artifact_ref	::= 'artifact' STRING | artifact

@@ -134,6 +134,47 @@ func (step *CommandStep) Perform() herr.BuildError {
 
 var _ abs.Step = &CommandStep{}
 
+type StandAloneCommandStep struct {
+	con.StepBase
+	Sources []abs.Artifact
+	CommandLine VariableCommandLine
+	Loud bool
+	CommandArise *herr.AriseRef
+}
+
+func (step *StandAloneCommandStep) Perform() herr.BuildError {
+	srcPaths, err := con.PathsOfArtifacts(step.Sources)
+	if err != nil {
+		return err
+	}
+	argvs, err := step.CommandLine(srcPaths, nil)
+	if err != nil {
+		return err
+	}
+	for _, argv := range argvs {
+		if len(argv) == 0 {
+			continue
+		}
+		cmd := exec.Command(argv[0])
+		cmd.Args = argv
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return &CommandFailedError {
+				Argv: argv,
+				Fault: err,
+				Output: out,
+				ExecArise: step.CommandArise,
+			}
+		}
+		if step.Loud {
+			fmt.Print(string(out))
+		}
+	}
+	return nil
+}
+
+var _ abs.Step = &StandAloneCommandStep{}
+
 type DeletePathStep struct {
 	con.StepBase
 	Path string
@@ -495,3 +536,43 @@ func (action *DeleteArtifactAction) Perform(plan *abs.Plan) herr.BuildError {
 }
 
 var _ abs.Action = &DeleteArtifactAction{}
+
+type CommandAction struct {
+	con.ActionBase
+	Sources []abs.Artifact
+	Description string
+	CommandLine VariableCommandLine
+	RequireCommandWords CommandWordsRequirer
+	Loud bool
+}
+
+func (action *CommandAction) AddSource(source abs.Artifact) {
+	action.Sources = append(action.Sources, source)
+}
+
+func (action *CommandAction) SimpleDescr() string {
+	return action.Description
+}
+
+func (action *CommandAction) Perform(plan *abs.Plan) herr.BuildError {
+	for _, source := range action.Sources {
+		err := source.Require(plan, action.Arise)
+		if err != nil {
+			return err
+		}
+	}
+	err := action.RequireCommandWords(plan, action.Arise)
+	if err != nil {
+		return err
+	}
+	step := &StandAloneCommandStep {
+		Sources: action.Sources,
+		CommandLine: action.CommandLine,
+		Loud: action.Loud,
+		CommandArise: action.Arise,
+	}
+	step.Description = action.Description
+	return nil
+}
+
+var _ abs.Action = &CommandAction{}

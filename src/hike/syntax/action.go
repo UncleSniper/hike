@@ -8,6 +8,7 @@ import (
 	gen "hike/generic"
 	abs "hike/abstract"
 	con "hike/concrete"
+	csx "hike/comsyntax"
 )
 
 func ParseAttainAction(parser *prs.Parser) *con.AttainAction {
@@ -130,4 +131,95 @@ func ParseDeleteAction(parser *prs.Parser) abs.Action {
 			parser.Frame("'delete' action", start)
 			return nil
 	}
+}
+
+func ParseCommandAction(parser *prs.Parser) abs.Action {
+	if !parser.ExpectKeyword("exec") {
+		return nil
+	}
+	start := &parser.Token.Location
+	parser.Next()
+	if !parser.ExpectExp(tok.T_STRING, "command description") {
+		parser.Frame("command action", start)
+		return nil
+	}
+	description := parser.InterpolateString()
+	parser.Next()
+	if !parser.Expect(tok.T_LBRACE) {
+		parser.Frame("command action", start)
+		return nil
+	}
+	parser.Next()
+	var words []gen.CommandWord
+	for csx.IsCommandWord(parser) {
+		word := csx.ParseCommandWord(parser)
+		if word == nil {
+			parser.Frame("command action", start)
+			return nil
+		}
+		words = append(words, word)
+	}
+	if len(words) == 0 {
+		parser.Die("command word")
+		parser.Frame("command action", start)
+		return nil
+	}
+	loud := false
+	for csx.IsExecOption(parser) {
+		switch parser.Token.Text {
+			case "loud":
+				loud = true
+				parser.Next()
+			case "suffixIsDestination":
+				// ignored
+				parser.Next()
+			default:
+				panic("Unrecognized exec option: " + parser.Token.Text)
+		}
+	}
+	arise := &herr.AriseRef {
+		Text: "'exec' stanza",
+		Location: start,
+	}
+	exec := &gen.CommandAction {
+		Description: description,
+		CommandLine: func(sources []string, destinations []string) ([][]string, herr.BuildError) {
+			assembled, err := gen.AssembleCommand(sources, destinations, words, arise)
+			return [][]string{
+				assembled,
+			}, err
+		},
+		RequireCommandWords: func(plan *abs.Plan, arise *herr.AriseRef) herr.BuildError {
+			for _, word := range words {
+				rerr := word.RequireCommandWordArtifacts(plan, arise)
+				if rerr != nil {
+					return rerr
+				}
+			}
+			return nil
+		},
+		Loud: loud,
+	}
+	exec.Arise = arise
+	specState := parser.SpecState()
+	for parser.IsArtifactRef(true) {
+		source := parser.ArtifactRef(&herr.AriseRef {
+			Text: "command transform source",
+			Location: &parser.Token.Location,
+		}, true)
+		if source == nil {
+			parser.Frame("command transform", start)
+			return nil
+		}
+		source.InjectArtifact(specState, func(artifact abs.Artifact) {
+			exec.AddSource(artifact)
+		})
+	}
+	if parser.Token.Type != tok.T_RBRACE {
+		parser.Die("artifact reference or '}'")
+		parser.Frame("command transform", start)
+		return nil
+	}
+	parser.Next()
+	return exec
 }
