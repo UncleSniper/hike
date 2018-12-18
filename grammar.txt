@@ -4,6 +4,7 @@ toplevel		::= goal
 					| setvar
 					| setvardef
 					| include
+					| 'projectName' STRING
 
 goal			::= 'goal' NAME (action | '{' goal_body '}')
 goal_body		::= ('label' STRING)? action+

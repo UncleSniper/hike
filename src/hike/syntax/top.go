@@ -220,3 +220,17 @@ func ParseInclude(parser *prs.Parser) {
 		parser.Frame("'include' directive", start)
 	}
 }
+
+func ParseProjectName(parser *prs.Parser) {
+	if !parser.ExpectKeyword("projectName") {
+		return
+	}
+	start := &parser.Token.Location
+	parser.Next()
+	if !parser.ExpectExp(tok.T_STRING, "project name") {
+		parser.Frame("'projectName' directive", start)
+		return
+	}
+	parser.SpecState().Config.ProjectName = parser.InterpolateString()
+	parser.Next()
+}

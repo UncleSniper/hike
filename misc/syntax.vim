@@ -6,6 +6,7 @@ syn keyword hikeModifier merge ifExists
 syn keyword hikeFilter files directories wildcard any all not
 syn keyword hikePlaceholder source dest aux
 syn keyword hikeAction attain require
+syn keyword hikeSetting projectKey
 
 syn match hikeInt /[+-]\?\<[0-9]\+\>/
 syn match hikeDelimiter /[{}]/
@@ -20,6 +21,7 @@ hi link hikeModifier PreProc
 hi link hikeFilter hikeModifier
 hi link hikePlaceholder PreProc
 hi link hikeAction Keyword
+hi link hikeSetting hikeModifier
 
 hi link hikeInt Number
 hi link hikeDelimiter Keyword

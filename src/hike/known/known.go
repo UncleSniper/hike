@@ -12,6 +12,7 @@ func RegisterCoreStructures(known *prs.KnownStructures) {
 	known.RegisterTopParser("set", syn.TopSetVar)
 	known.RegisterTopParser("setdef", syn.TopSetVarDef)
 	known.RegisterTopParser("include", syn.ParseInclude)
+	known.RegisterTopParser("projectName", syn.ParseProjectName)
 	// ActionParser
 	known.RegisterActionParser("attain", syn.TopAttainAction)
 	known.RegisterActionParser("require", syn.TopRequireAction)
