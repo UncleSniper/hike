@@ -269,6 +269,7 @@ func (xform *ZipTransform) Plan(destination abs.Artifact, plan *abs.Plan) herr.B
 		sources,
 		destination,
 		plan,
+		con.RequireNoMore,
 		func() herr.BuildError {
 			step := &ZipStep {
 				Pieces: xform.Pieces,

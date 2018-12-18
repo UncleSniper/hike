@@ -633,10 +633,15 @@ func PlanSingleTransform(
 	transform abs.Transform,
 	source, destination abs.Artifact,
 	plan *abs.Plan,
+	requireMore func() herr.BuildError,
 	planner func() herr.BuildError,
 ) herr.BuildError {
 	stepCount := plan.StepCount()
 	rerr := source.Require(plan, transform.TransformArise())
+	if rerr != nil {
+		return xformFrame(rerr, transform)
+	}
+	rerr = requireMore()
 	if rerr != nil {
 		return xformFrame(rerr, transform)
 	}
@@ -662,6 +667,7 @@ func PlanMultiTransform(
 	sources []abs.Artifact,
 	destination abs.Artifact,
 	plan *abs.Plan,
+	requireMore func() herr.BuildError,
 	planner func() herr.BuildError,
 ) herr.BuildError {
 	stepCount := plan.StepCount()
@@ -670,6 +676,10 @@ func PlanMultiTransform(
 		if rerr != nil {
 			return xformFrame(rerr, transform)
 		}
+	}
+	rerr := requireMore()
+	if rerr != nil {
+		return xformFrame(rerr, transform)
 	}
 	if plan.StepCount() != stepCount {
 		return xformFrame(planner(), transform)
@@ -694,6 +704,10 @@ func PlanMultiTransform(
 	if apply {
 		return xformFrame(planner(), transform)
 	}
+	return nil
+}
+
+func RequireNoMore() herr.BuildError {
 	return nil
 }
 

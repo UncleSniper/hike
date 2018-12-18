@@ -3,8 +3,8 @@ syn keyword hikeInitiator delete split set setdef include copy zip piece unzip v
 syn keyword hikeOption label name key base loud suffixIsDestination rebaseFrom rebaseTo noCache
 syn keyword hikeOption toDirectory from to rename
 syn keyword hikeModifier merge ifExists
-syn keyword hikeFilter files directories wildcard
-syn keyword hikePlaceholder source dest
+syn keyword hikeFilter files directories wildcard any all not
+syn keyword hikePlaceholder source dest aux
 syn keyword hikeAction attain require
 
 syn match hikeInt /[+-]\?\<[0-9]\+\>/

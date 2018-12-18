@@ -48,8 +48,9 @@ transform		::= exec_transform
 					| unzip_transform
 exec_transform	::= 'exec' STRING '{' command_word+ exec_option* x_artifact_ref* '}'
 command_word	::= STRING
-					| 'source'
-					| 'dest'
+					| 'source' 'merge'?
+					| 'dest' 'merge'?
+					| 'aux' artifact_ref 'merge'?
 					| '{' command_word+ '}'
 exec_option		::= 'loud'
 					| 'suffixIsDestination'
@@ -81,6 +82,8 @@ scandir_opt		::= 'key' STRING
 file_filter		::= 'files'
 					| 'directories'
 					| 'wildcard' STRING
+					| 'any' '{' file_filter* '}'
+					| 'all' '{' file_filter* '}'
 
 artifact_fact	::= static_file
 					| regex_file

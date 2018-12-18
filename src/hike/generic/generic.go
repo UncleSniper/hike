@@ -78,8 +78,9 @@ var _ herr.BuildError = &CommandFailedError{}
 
 // ---------------------------------------- Step ----------------------------------------
 
-type VariableCommandLine func([]string, []string) [][]string
+type VariableCommandLine func([]string, []string) ([][]string, herr.BuildError)
 type CommandLineDumper func(uint) error
+type CommandWordsRequirer func(*abs.Plan, *herr.AriseRef) herr.BuildError
 
 type CommandStep struct {
 	con.StepBase
@@ -105,7 +106,10 @@ func (step *CommandStep) Perform() herr.BuildError {
 	if err != nil {
 		return err
 	}
-	argvs := step.CommandLine(srcPaths, destPaths)
+	argvs, err := step.CommandLine(srcPaths, destPaths)
+	if err != nil {
+		return err
+	}
 	for _, argv := range argvs {
 		if len(argv) == 0 {
 			continue
@@ -181,6 +185,7 @@ var _ abs.Step = &DeleteArtifactStep{}
 type CommandTransformBase struct {
 	CommandLine VariableCommandLine
 	DumpCommandLine CommandLineDumper
+	RequireCommandWords CommandWordsRequirer
 	Loud bool
 	SuffixIsDestination bool
 }
@@ -209,22 +214,35 @@ func (base *CommandTransformBase) PlanCommandTransform(
 	plan.AddStep(step)
 }
 
+func (base *CommandTransformBase) CommandWordsRequirer(plan *abs.Plan, arise *herr.AriseRef) func() herr.BuildError {
+	return func() herr.BuildError {
+		return base.RequireCommandWords(plan, arise)
+	}
+}
+
 type SingleCommandTransform struct {
 	con.SingleTransformBase
 	CommandTransformBase
 }
 
 func (transform *SingleCommandTransform) Plan(destination abs.Artifact, plan *abs.Plan) herr.BuildError {
-	return con.PlanSingleTransform(transform, transform.Source, destination, plan, func() herr.BuildError {
-		transform.PlanCommandTransform(
-			transform.Description,
-			[]abs.Artifact{transform.Source},
-			destination,
-			plan,
-			transform.TransformArise(),
-		)
-		return nil
-	})
+	return con.PlanSingleTransform(
+		transform,
+		transform.Source,
+		destination,
+		plan,
+		transform.CommandWordsRequirer(plan, transform.Arise),
+		func() herr.BuildError {
+			transform.PlanCommandTransform(
+				transform.Description,
+				[]abs.Artifact{transform.Source},
+				destination,
+				plan,
+				transform.TransformArise(),
+			)
+			return nil
+		},
+	)
 }
 
 func (transform *SingleCommandTransform) DumpTransform(level uint) error {
@@ -265,6 +283,7 @@ func NewSingleCommandTransform(
 	source abs.Artifact,
 	commandLine VariableCommandLine,
 	dumpCommandLine CommandLineDumper,
+	requireCommandWords CommandWordsRequirer,
 	loud bool,
 	suffixIsDestination bool,
 ) *SingleCommandTransform {
@@ -274,6 +293,7 @@ func NewSingleCommandTransform(
 	transform.Source = source
 	transform.CommandLine = commandLine
 	transform.DumpCommandLine = dumpCommandLine
+	transform.RequireCommandWords = requireCommandWords
 	transform.Loud = loud
 	transform.SuffixIsDestination = suffixIsDestination
 	return transform
@@ -285,16 +305,23 @@ type MultiCommandTransform struct {
 }
 
 func (transform *MultiCommandTransform) Plan(destination abs.Artifact, plan *abs.Plan) herr.BuildError {
-	return con.PlanMultiTransform(transform, transform.Sources, destination, plan, func() herr.BuildError {
-		transform.PlanCommandTransform(
-			transform.Description,
-			transform.Sources,
-			destination,
-			plan,
-			transform.TransformArise(),
-		)
-		return nil
-	})
+	return con.PlanMultiTransform(
+		transform,
+		transform.Sources,
+		destination,
+		plan,
+		transform.CommandWordsRequirer(plan, transform.Arise),
+		func() herr.BuildError {
+			transform.PlanCommandTransform(
+				transform.Description,
+				transform.Sources,
+				destination,
+				plan,
+				transform.TransformArise(),
+			)
+			return nil
+		},
+	)
 }
 
 func (transform *MultiCommandTransform) DumpTransform(level uint) error {
@@ -336,6 +363,7 @@ func NewMultiCommandTransform(
 	arise *herr.AriseRef,
 	commandLine VariableCommandLine,
 	dumpCommandLine CommandLineDumper,
+	requireCommandWords CommandWordsRequirer,
 	loud bool,
 	suffixIsDestination bool,
 ) *MultiCommandTransform {
@@ -344,6 +372,7 @@ func NewMultiCommandTransform(
 	transform.Arise = arise
 	transform.CommandLine = commandLine
 	transform.DumpCommandLine = dumpCommandLine
+	transform.RequireCommandWords = requireCommandWords
 	transform.Loud = loud
 	transform.SuffixIsDestination = suffixIsDestination
 	return transform

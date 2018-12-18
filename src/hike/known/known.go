@@ -41,6 +41,9 @@ func RegisterCoreStructures(known *prs.KnownStructures) {
 	known.RegisterFileFilterParser("files", syn.TopFilesFileFilter)
 	known.RegisterFileFilterParser("directories", syn.TopDirectoriesFileFilter)
 	known.RegisterFileFilterParser("wildcard", syn.TopWildcardFileFilter)
+	known.RegisterFileFilterParser("all", syn.TopAllFileFilter)
+	known.RegisterFileFilterParser("any", syn.TopAnyFileFilter)
+	known.RegisterFileFilterParser("not", syn.TopNotFileFilter)
 }
 
 func RegisterAllKnownStructures(known *prs.KnownStructures) {

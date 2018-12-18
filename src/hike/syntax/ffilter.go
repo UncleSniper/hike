@@ -64,3 +64,108 @@ func TopWildcardFileFilter(parser *prs.Parser) hlv.FileFilter {
 		return nil
 	}
 }
+
+func ParseAnyFileFilter(parser *prs.Parser) *hlm.AnyFileFilter {
+	if !parser.ExpectKeyword("any") {
+		return nil
+	}
+	start := &parser.Token.Location
+	parser.Next()
+	if !parser.Expect(tok.T_LBRACE) {
+		parser.Frame("'any' file filter", start)
+		return nil
+	}
+	parser.Next()
+	var children []hlv.FileFilter
+	for {
+		switch {
+			case parser.Token.Type == tok.T_RBRACE:
+				parser.Next()
+				return hlm.NewAnyFileFilter(children)
+			case parser.IsFileFilter():
+				child := parser.FileFilter()
+				if child == nil {
+					parser.Frame("'any' file filter", start)
+					return nil
+				}
+				children = append(children, child)
+			default:
+				parser.Die("file filter or '}'")
+				parser.Frame("'any' file filter", start)
+				return nil
+		}
+	}
+}
+
+func TopAnyFileFilter(parser *prs.Parser) hlv.FileFilter {
+	filter := ParseAnyFileFilter(parser)
+	if filter != nil {
+		return filter
+	} else {
+		return nil
+	}
+}
+
+func ParseAllFileFilter(parser *prs.Parser) *hlm.AllFileFilter {
+	if !parser.ExpectKeyword("all") {
+		return nil
+	}
+	start := &parser.Token.Location
+	parser.Next()
+	if !parser.Expect(tok.T_LBRACE) {
+		parser.Frame("'all' file filter", start)
+		return nil
+	}
+	parser.Next()
+	var children []hlv.FileFilter
+	for {
+		switch {
+			case parser.Token.Type == tok.T_RBRACE:
+				parser.Next()
+				return hlm.NewAllFileFilter(children)
+			case parser.IsFileFilter():
+				child := parser.FileFilter()
+				if child == nil {
+					parser.Frame("'all' file filter", start)
+					return nil
+				}
+				children = append(children, child)
+			default:
+				parser.Die("file filter or '}'")
+				parser.Frame("'all' file filter", start)
+				return nil
+		}
+	}
+}
+
+func TopAllFileFilter(parser *prs.Parser) hlv.FileFilter {
+	filter := ParseAllFileFilter(parser)
+	if filter != nil {
+		return filter
+	} else {
+		return nil
+	}
+}
+
+func ParseNotFileFilter(parser *prs.Parser) *hlm.NotFileFilter {
+	if !parser.ExpectKeyword("not") {
+		return nil
+	}
+	start := &parser.Token.Location
+	parser.Next()
+	child := parser.FileFilter()
+	if child == nil {
+		parser.Frame("'not' file filter", start)
+		return nil
+	}
+	return hlm.NewNotFileFilter(child)
+}
+
+func TopNotFileFilter(parser *prs.Parser) hlv.FileFilter {
+	filter := ParseNotFileFilter(parser)
+	if filter != nil {
+		return filter
+	} else {
+		return nil
+	}
+}

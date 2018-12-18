@@ -183,6 +183,7 @@ func (xform *CopyTransform) Plan(destination abs.Artifact, plan *abs.Plan) herr.
 		xform.Sources,
 		destination,
 		plan,
+		con.RequireNoMore,
 		func() herr.BuildError {
 			srcPaths, err := con.PathsOfArtifacts(xform.Sources)
 			if err != nil {

@@ -49,6 +49,7 @@ func (factory *CommandTransformFactory) NewTransform(
 		factory.Arise,
 		factory.CommandLine,
 		factory.DumpCommandLine,
+		factory.RequireCommandWords,
 		factory.Loud,
 		factory.SuffixIsDestination,
 	)

@@ -58,19 +58,30 @@ func ParseCommandTransform(parser *prs.Parser) *gen.MultiCommandTransform {
 				panic("Unrecognized exec option: " + parser.Token.Text)
 		}
 	}
+	arise := &herr.AriseRef {
+		Text: "'exec' stanza",
+		Location: start,
+	}
 	exec := gen.NewMultiCommandTransform(
 		description,
-		&herr.AriseRef {
-			Text: "'exec' stanza",
-			Location: start,
-		},
-		func(sources []string, destinations []string) [][]string {
+		arise,
+		func(sources []string, destinations []string) ([][]string, herr.BuildError) {
+			assembled, err := gen.AssembleCommand(sources, destinations, words, arise)
 			return [][]string{
-				gen.AssembleCommand(sources, destinations, words),
-			}
+				assembled,
+			}, err
 		},
 		func(level uint) error {
 			return gen.DumpCommandWords(words, level)
+		},
+		func(plan *abs.Plan, arise *herr.AriseRef) herr.BuildError {
+			for _, word := range words {
+				rerr := word.RequireCommandWordArtifacts(plan, arise)
+				if rerr != nil {
+					return rerr
+				}
+			}
+			return nil
 		},
 		loud,
 		suffixIsDestination,

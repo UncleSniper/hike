@@ -1,9 +1,11 @@
 package comsyntax
 
 import (
+	herr "hike/error"
 	tok "hike/token"
 	prs "hike/parser"
 	gen "hike/generic"
+	abs "hike/abstract"
 )
 
 func IsCommandWord(parser *prs.Parser) bool {
@@ -11,7 +13,7 @@ func IsCommandWord(parser *prs.Parser) bool {
 		case tok.T_STRING, tok.T_LBRACE:
 			return true
 		case tok.T_NAME:
-			return parser.Token.Text == "source" || parser.Token.Text == "dest"
+			return parser.Token.Text == "source" || parser.Token.Text == "dest" || parser.Token.Text == "aux"
 		default:
 			return false
 	}
@@ -51,10 +53,39 @@ func ParseCommandWord(parser *prs.Parser) gen.CommandWord {
 			switch parser.Token.Text {
 				case "source":
 					parser.Next()
-					return &gen.SourceCommandWord{}
+					word := &gen.SourceCommandWord {}
+					if parser.IsKeyword("merge") {
+						word.Merge = true
+						parser.Next()
+					}
+					return word
 				case "dest":
 					parser.Next()
-					return &gen.DestinationCommandWord{}
+					word := &gen.DestinationCommandWord{}
+					if parser.IsKeyword("merge") {
+						word.Merge = true
+						parser.Next()
+					}
+					return word
+				case "aux":
+					auxloc := &parser.Token.Location
+					parser.Next()
+					auxart := parser.ArtifactRef(&herr.AriseRef {
+						Text: "command transform auxiliary artifact",
+						Location: auxloc,
+					}, false)
+					if auxart == nil {
+						return nil
+					}
+					word := &gen.ArtifactCommandWord{}
+					auxart.InjectArtifact(parser.SpecState(), func(artifact abs.Artifact) {
+						word.Artifact = artifact
+					})
+					if parser.IsKeyword("merge") {
+						word.Merge = true
+						parser.Next()
+					}
+					return word
 				default:
 					parser.Die("command word")
 					return nil

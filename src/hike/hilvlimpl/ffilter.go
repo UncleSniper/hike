@@ -64,6 +64,114 @@ func (filter *WildcardFileFilter) DumpFilter(level uint) error {
 
 var _ hlv.FileFilter = &WildcardFileFilter{}
 
+// ---------------------------------------- AnyFileFilter ----------------------------------------
+
+type AnyFileFilter struct {
+	Children []hlv.FileFilter
+}
+
+func NewAnyFileFilter(children []hlv.FileFilter) *AnyFileFilter {
+	return &AnyFileFilter {
+		Children: children,
+	}
+}
+
+func (filter *AnyFileFilter) AcceptFile(fullPath string, baseDir string, info os.FileInfo) bool {
+	for _, child := range filter.Children {
+		if child.AcceptFile(fullPath, baseDir, info) {
+			return true
+		}
+	}
+	return false
+}
+
+func (filter *AnyFileFilter) DumpFilter(level uint) error {
+	prn := herr.NewErrorPrinter()
+	prn.Out = os.Stdout
+	prn.Level(level)
+	prn.Print("any {")
+	for _, child := range filter.Children {
+		prn.Println()
+		prn.Indent(1)
+		prn.Inject(child.DumpFilter, 0)
+	}
+	if len(filter.Children) > 0 {
+		prn.Println()
+		prn.Indent(0)
+	}
+	prn.Print("}")
+	return prn.Done()
+}
+
+var _ hlv.FileFilter = &AnyFileFilter{}
+
+// ---------------------------------------- AllFileFilter ----------------------------------------
+
+type AllFileFilter struct {
+	Children []hlv.FileFilter
+}
+
+func NewAllFileFilter(children []hlv.FileFilter) *AllFileFilter {
+	return &AllFileFilter {
+		Children: children,
+	}
+}
+
+func (filter *AllFileFilter) AcceptFile(fullPath string, baseDir string, info os.FileInfo) bool {
+	for _, child := range filter.Children {
+		if !child.AcceptFile(fullPath, baseDir, info) {
+			return false
+		}
+	}
+	return true
+}
+
+func (filter *AllFileFilter) DumpFilter(level uint) error {
+	prn := herr.NewErrorPrinter()
+	prn.Out = os.Stdout
+	prn.Level(level)
+	prn.Print("all {")
+	for _, child := range filter.Children {
+		prn.Println()
+		prn.Indent(1)
+		prn.Inject(child.DumpFilter, 0)
+	}
+	if len(filter.Children) > 0 {
+		prn.Println()
+		prn.Indent(0)
+	}
+	prn.Print("}")
+	return prn.Done()
+}
+
+var _ hlv.FileFilter = &AllFileFilter{}
+
+// ---------------------------------------- AllFileFilter ----------------------------------------
+
+type NotFileFilter struct {
+	Child hlv.FileFilter
+}
+
+func NewNotFileFilter(child hlv.FileFilter) *NotFileFilter {
+	return &NotFileFilter {
+		Child: child,
+	}
+}
+
+func (filter *NotFileFilter) AcceptFile(fullPath string, baseDir string, info os.FileInfo) bool {
+	return !filter.Child.AcceptFile(fullPath, baseDir, info)
+}
+
+func (filter *NotFileFilter) DumpFilter(level uint) error {
+	prn := herr.NewErrorPrinter()
+	prn.Out = os.Stdout
+	prn.Print("not ")
+	prn.Inject(filter.Child.DumpFilter, level)
+	return prn.Done()
+}
+
+var _ hlv.FileFilter = &NotFileFilter{}
+
 // ---------------------------------------- misc ----------------------------------------
 
 func AllFileFilters(fullPath string, baseDir string, info os.FileInfo, filters []hlv.FileFilter) bool {

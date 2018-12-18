@@ -55,16 +55,18 @@ func ParseCommandTransformFactory(parser *prs.Parser) *hlm.CommandTransformFacto
 				panic("Unrecognized exec option: " + parser.Token.Text)
 		}
 	}
+	arise := &herr.AriseRef {
+		Text: "'exec' stanza",
+		Location: start,
+	}
 	exec := hlm.NewCommandTransformFactory(
 		description,
-		&herr.AriseRef {
-			Text: "'exec' stanza",
-			Location: start,
-		},
-		func(sources []string, destinations []string) [][]string {
+		arise,
+		func(sources []string, destinations []string) ([][]string, herr.BuildError) {
+			assembled, err := gen.AssembleCommand(sources, destinations, words, arise)
 			return [][]string{
-				gen.AssembleCommand(sources, destinations, words),
-			}
+				assembled,
+			}, err
 		},
 		func(level uint) error {
 			return gen.DumpCommandWords(words, level)

@@ -287,6 +287,7 @@ func (xform *UnzipTransform) Plan(destination abs.Artifact, plan *abs.Plan) herr
 		xform.Sources,
 		destination,
 		plan,
+		con.RequireNoMore,
 		func() herr.BuildError {
 			archPaths, err := con.PathsOfArtifacts(xform.Sources)
 			if err != nil {
