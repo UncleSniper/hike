@@ -542,3 +542,24 @@ func TopUnzipTransform(parser *prs.Parser) abs.Transform {
 		return nil
 	}
 }
+
+func ParseMkdirTransform(parser *prs.Parser) *gen.MkdirTransform {
+	if !parser.ExpectKeyword("mkdir") {
+		return nil
+	}
+	start := &parser.Token.Location
+	parser.Next()
+	return gen.NewMkdirTransform(&herr.AriseRef {
+		Text: "'mkdir' stanza",
+		Location: start,
+	})
+}
+
+func TopMkdirTransform(parser *prs.Parser) abs.Transform {
+	transform := ParseMkdirTransform(parser)
+	if transform != nil {
+		return transform
+	} else {
+		return nil
+	}
+}

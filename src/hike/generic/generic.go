@@ -180,6 +180,32 @@ func (step *DeleteArtifactStep) Perform() herr.BuildError {
 
 var _ abs.Step = &DeleteArtifactStep{}
 
+type MkdirStep struct {
+	con.StepBase
+	Artifact abs.Artifact
+	CreateArise *herr.AriseRef
+}
+
+func (step *MkdirStep) Perform() herr.BuildError {
+	paths, err := step.Artifact.PathNames(nil)
+	if err != nil {
+		return err
+	}
+	for _, path := range paths {
+		nerr := os.MkdirAll(path, 0755)
+		if nerr != nil {
+			return &con.CannotCreateDirectoryError {
+				Path: path,
+				OSError: nerr,
+				OperationArise: step.CreateArise,
+			}
+		}
+	}
+	return nil
+}
+
+var _ abs.Step = &MkdirStep{}
+
 // ---------------------------------------- Transform ----------------------------------------
 
 type CommandTransformBase struct {
@@ -376,6 +402,43 @@ func NewMultiCommandTransform(
 	transform.Loud = loud
 	transform.SuffixIsDestination = suffixIsDestination
 	return transform
+}
+
+type MkdirTransform struct {
+	con.TransformBase
+}
+
+func NewMkdirTransform(
+	arise *herr.AriseRef,
+) *MkdirTransform {
+	transform := &MkdirTransform{}
+	transform.Description = "mkdir"
+	transform.Arise = arise
+	return transform
+}
+
+func (transform *MkdirTransform) Plan(destination abs.Artifact, plan *abs.Plan) herr.BuildError {
+	_, err, missing := destination.EarliestModTime(transform.Arise)
+	if err != nil {
+		return err
+	}
+	if !missing {
+		return nil
+	}
+	step := &MkdirStep {
+		Artifact: destination,
+		CreateArise: transform.Arise,
+	}
+	step.Description = fmt.Sprintf("[%s] mkdir %s", destination.ArtifactKey().Project, destination.DisplayName())
+	plan.AddStep(step)
+	return nil
+}
+
+func (transform  *MkdirTransform) DumpTransform(level uint) error {
+	prn := herr.NewErrorPrinter()
+	prn.Out = os.Stdout
+	prn.Print("mkdir")
+	return prn.Done()
 }
 
 // ---------------------------------------- Action ----------------------------------------
