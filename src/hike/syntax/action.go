@@ -181,8 +181,10 @@ func ParseCommandAction(parser *prs.Parser) abs.Action {
 		Text: "'exec' stanza",
 		Location: start,
 	}
+	specState := parser.SpecState()
 	exec := &gen.CommandAction {
 		Description: description,
+		Project: specState.Config.ProjectName,
 		CommandLine: func(sources []string, destinations []string) ([][]string, herr.BuildError) {
 			assembled, err := gen.AssembleCommand(sources, destinations, words, arise)
 			return [][]string{
@@ -201,7 +203,6 @@ func ParseCommandAction(parser *prs.Parser) abs.Action {
 		Loud: loud,
 	}
 	exec.Arise = arise
-	specState := parser.SpecState()
 	for parser.IsArtifactRef(true) {
 		source := parser.ArtifactRef(&herr.AriseRef {
 			Text: "command transform source",

@@ -541,6 +541,7 @@ type CommandAction struct {
 	con.ActionBase
 	Sources []abs.Artifact
 	Description string
+	Project string
 	CommandLine VariableCommandLine
 	RequireCommandWords CommandWordsRequirer
 	Loud bool
@@ -571,7 +572,8 @@ func (action *CommandAction) Perform(plan *abs.Plan) herr.BuildError {
 		Loud: action.Loud,
 		CommandArise: action.Arise,
 	}
-	step.Description = action.Description
+	step.Description = fmt.Sprintf("[%s] %s", action.Project, action.Description)
+	plan.AddStep(step)
 	return nil
 }
 
